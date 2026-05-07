@@ -1,0 +1,54 @@
+<view class="page">
+  <!-- 新增按钮 -->
+  <view class="add-bar flex-center" bindtap="showAdd">
+    <text class="add-icon">✏️</text>
+    <text class="add-text">写一篇新日记</text>
+  </view>
+
+  <!-- 日记列表 -->
+  <view class="diary-list">
+    <view class="diary-item" wx:for="{{diaries}}" wx:key="id">
+      <view class="diary-header flex-between">
+        <view class="diary-date">{{item.date}}</view>
+        <view class="diary-mood">
+          <text wx:if="{{item.mood === 'happy'}}">😊</text>
+          <text wx:elif="{{item.mood === 'love'}}">🥰</text>
+          <text wx:elif="{{item.mood === 'care'}}">🤧</text>
+          <text wx:else>💭</text>
+        </view>
+      </view>
+      <view class="diary-title">{{item.title}}</view>
+      <view class="diary-content">{{item.content}}</view>
+    </view>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="empty" wx:if="{{diaries.length === 0}}">
+    <text class="empty-emoji">📖</text>
+    <text class="empty-text">还没有恋爱日记哦～</text>
+    <text class="empty-sub">写下你们的第一个故事吧</text>
+  </view>
+
+  <!-- 新增弹窗 -->
+  <view class="modal-mask" wx:if="{{showModal}}" bindtap="hideModal">
+    <view class="modal-content" catchtap="noop">
+      <view class="modal-title">写日记</view>
+      <input class="modal-input" placeholder="标题" value="{{newTitle}}" bindinput="onTitleInput" />
+      <textarea
+        class="modal-textarea"
+        placeholder="今天发生了什么故事呢？"
+        value="{{newContent}}"
+        bindinput="onContentInput"
+        auto-height
+        maxlength="500"
+      />
+      <text class="modal-count">{{newContent.length || 0}}/500</text>
+      <view class="modal-btns flex-row">
+        <view class="modal-btn cancel" bindtap="hideModal">取消</view>
+        <view class="modal-btn confirm" bindtap="addDiary">发布</view>
+      </view>
+    </view>
+  </view>
+
+  <view style="height: 40rpx;"></view>
+</view>

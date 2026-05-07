@@ -1,0 +1,207 @@
+<view class="page">
+  <!-- 情侣信息头 -->
+  <view class="profile-header">
+    <view class="couple-avatars flex-center">
+      <view class="avatar-wrap" bindtap="changeBoyAvatar">
+        <view class="avatar boy-avatar flex-center">
+          <image wx:if="{{boyAvatar}}" src="{{boyAvatar}}" mode="aspectFill" class="avatar-img" />
+          <text wx:else>🧑</text>
+        </view>
+        <text class="avatar-name">{{boyName}}</text>
+        <text class="avatar-edit">📷</text>
+      </view>
+      <view class="heart-connector">
+        <text class="heart-beat">❤️</text>
+      </view>
+      <view class="avatar-wrap" bindtap="changeGirlAvatar">
+        <view class="avatar girl-avatar flex-center">
+          <image wx:if="{{girlAvatar}}" src="{{girlAvatar}}" mode="aspectFill" class="avatar-img" />
+          <text wx:else>👩</text>
+        </view>
+        <text class="avatar-name">{{girlName}}</text>
+        <text class="avatar-edit">📷</text>
+      </view>
+    </view>
+    <view class="days-info">
+      <text>我们已经在一起</text>
+      <text class="days-big">{{togetherDays}}</text>
+      <text>天啦 💕</text>
+    </view>
+    <view class="date-info" bindtap="editTogetherDate">从 {{togetherDateStr}} 开始 ›</view>
+  </view>
+
+  <!-- 统计数据 -->
+  <view class="stats-row flex-row">
+    <view class="stat-item" bindtap="goDiary">
+      <view class="stat-num">{{diaryCount}}</view>
+      <view class="stat-label">恋爱日记</view>
+    </view>
+    <view class="stat-item" bindtap="goAlbum">
+      <view class="stat-num">{{photoCount}}</view>
+      <view class="stat-label">时光照片</view>
+    </view>
+    <view class="stat-item" bindtap="goAnniversary">
+      <view class="stat-num">{{anniversaryCount}}</view>
+      <view class="stat-label">纪念日</view>
+    </view>
+  </view>
+
+
+  <!-- ===== 使用者模式：爱心币余额 + 充值 ===== -->
+  <view wx:if="{{!isDev}}">
+    <c-card title="💖 我的爱心币">
+      <view class="coin-display flex-center">
+        <text class="coin-big">{{coinBalance}}</text>
+        <text class="coin-unit">爱心币</text>
+      </view>
+      <view class="recharge-btn-full" bindtap="showRecharge">💌 向浪申请充值</view>
+    </c-card>
+  </view>
+
+  <!-- ===== 开发者模式：爱心币管理 ===== -->
+  <view wx:if="{{isDev}}">
+    <c-card title="💖 爱心币管理">
+      <view class="coin-row flex-between">
+        <view class="coin-info">
+          <view class="coin-balance-title">琳琳的余额</view>
+          <view class="coin-balance-num">{{coinBalance}} 💖</view>
+        </view>
+        <view class="coin-actions flex-row">
+          <view class="coin-btn" bindtap="addCoins" data-amount="{{10}}">+10</view>
+          <view class="coin-btn" bindtap="addCoins" data-amount="{{50}}">+50</view>
+          <view class="coin-btn primary" bindtap="addCoins" data-amount="{{100}}">+100</view>
+        </view>
+      </view>
+      <view class="coin-hint">直接发放爱心币给琳琳</view>
+    </c-card>
+
+    <!-- 使用者密钥管理 -->
+    <c-card title="🔑 使用者密钥">
+      <view class="key-info">
+        <view class="key-row flex-between">
+          <text>当前密钥</text>
+          <text class="key-val">{{userKeyMasked}}</text>
+        </view>
+        <view class="key-row flex-between" bindtap="changeUserKey">
+          <text>修改使用者密钥</text>
+          <text class="set-arrow">›</text>
+        </view>
+      </view>
+    </c-card>
+  </view>
+
+  <!-- 设置 -->
+  <c-card title="设置">
+    <view class="setting-item flex-between" bindtap="editTogetherDate">
+      <text>修改在一起日期</text>
+      <text class="set-val">{{togetherDateStr}}</text>
+      <text class="set-arrow">›</text>
+    </view>
+    <view class="setting-item flex-between" bindtap="editNames">
+      <text>修改昵称</text>
+      <text class="set-arrow">›</text>
+    </view>
+    <view class="setting-item flex-between">
+      <text>应用锁</text>
+      <switch checked="{{lockEnabled}}" bindchange="onLockSwitch" color="#FF6B8A" />
+    </view>
+    <!-- 切换角色 -->
+    <view class="setting-item flex-between" bindtap="switchRole">
+      <text>切换角色</text>
+      <text class="set-val">{{isDev ? '开发者 → 使用者' : '使用者 → 开发者'}}</text>
+      <text class="set-arrow">›</text>
+    </view>
+    <view class="setting-item flex-between" bindtap="resetApp">
+      <text>重新设置</text>
+      <text class="set-arrow">›</text>
+    </view>
+  </c-card>
+
+  <!-- 充值弹窗（使用者） -->
+  <view class="overlay" wx:if="{{showRechargeModal}}" bindtap="hideRecharge">
+    <view class="modal-card" catchtap="noop">
+      <view class="modal-title">💖 申请充值</view>
+      <view class="form-row">
+        <text class="form-label">想要多少币</text>
+        <input class="form-input short-input" type="number" placeholder="10" value="{{rechargeAmount}}" bindinput="onRechargeAmount" />
+      </view>
+      <view class="form-row">
+        <text class="form-label">用什么交换</text>
+        <input class="form-input" placeholder="比如：一个抱抱、按摩一次…" value="{{rechargeItem}}" bindinput="onRechargeItem" maxlength="50" />
+      </view>
+      <view class="modal-desc">浪看到后会决定是否批准 💌</view>
+      <view class="modal-btns flex-row">
+        <view class="mbtn cancel" bindtap="hideRecharge">取消</view>
+        <view class="mbtn confirm" bindtap="sendRecharge">发送请求</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 修改使用者密钥弹窗（开发者） -->
+  <view class="overlay" wx:if="{{showKeyModal}}" bindtap="hideKeyModal">
+    <view class="modal-card" catchtap="noop">
+      <view class="modal-title">🔑 修改使用者密钥</view>
+      <input class="key-input" type="password" placeholder="输入新的使用者密钥" value="{{newUserKey}}" bindinput="onNewUserKey" maxlength="20" />
+      <view class="modal-btns flex-row" style="margin-top: 20rpx;">
+        <view class="mbtn cancel" bindtap="hideKeyModal">取消</view>
+        <view class="mbtn confirm" bindtap="saveUserKey">保存</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 切换角色验证弹窗 -->
+  <view class="overlay" wx:if="{{showRoleModal}}" bindtap="hideRoleModal">
+    <view class="modal-card" catchtap="noop">
+      <view class="modal-title">{{targetRole === 'dev' ? '🔧 切换到开发者' : '💕 切换到使用者'}}</view>
+      <view class="modal-desc">
+        {{targetRole === 'dev' ? '请输入开发者密钥' : '请输入使用者密钥'}}
+      </view>
+      <input class="key-input" type="password" placeholder="请输入密钥" value="{{roleKey}}" bindinput="onRoleKey" maxlength="20" />
+      <view class="key-hint" wx:if="{{roleKeyError}}">{{roleKeyError}}</view>
+      <view class="modal-btns flex-row" style="margin-top: 20rpx;">
+        <view class="mbtn cancel" bindtap="hideRoleModal">取消</view>
+        <view class="mbtn confirm" bindtap="confirmSwitchRole">确认切换</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 修改在一起日期弹窗 -->
+  <view class="overlay" wx:if="{{showDatePicker}}" bindtap="hideDatePicker">
+    <view class="modal-card" catchtap="noop">
+      <view class="modal-title">修改在一起的日子</view>
+      <picker mode="date" value="{{togetherDateVal}}" bindchange="onTogetherDateChange">
+        <view class="date-picker">{{togetherDateVal || '选择日期'}}</view>
+      </picker>
+      <view class="modal-btns flex-row" style="margin-top: 24rpx;">
+        <view class="mbtn cancel" bindtap="hideDatePicker">取消</view>
+        <view class="mbtn confirm" bindtap="saveTogetherDate">确定</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 修改昵称弹窗 -->
+  <view class="overlay" wx:if="{{showNameModal}}" bindtap="hideNameModal">
+    <view class="modal-card" catchtap="noop">
+      <view class="modal-title">修改昵称</view>
+      <view class="form-row">
+        <text class="form-label">👨 男生</text>
+        <input class="form-input" value="{{editBoyName}}" bindinput="onEditBoyName" maxlength="10" />
+      </view>
+      <view class="form-row">
+        <text class="form-label">👩 女生</text>
+        <input class="form-input" value="{{editGirlName}}" bindinput="onEditGirlName" maxlength="10" />
+      </view>
+      <view class="modal-btns flex-row">
+        <view class="mbtn cancel" bindtap="hideNameModal">取消</view>
+        <view class="mbtn confirm" bindtap="saveNames">保存</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 页脚 -->
+  <view class="footer">
+    <text>琳的生活菜单 v1.0</text>
+    <text class="footer-heart">Made with 💕</text>
+  </view>
+  <view style="height: 40rpx;"></view>
+</view>

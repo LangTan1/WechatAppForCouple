@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "琳浪小栈",
+  "usingComponents": {
+    "c-card": "/components/card/card"
+  }
+}

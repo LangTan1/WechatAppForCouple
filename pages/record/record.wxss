@@ -1,0 +1,76 @@
+.page {
+  padding-top: 20rpx;
+}
+
+/* 入口卡片 */
+.record-entries {
+  margin: 0 24rpx;
+}
+
+.record-entry {
+  background: #FFFFFF;
+  border-radius: 24rpx;
+  padding: 28rpx 24rpx;
+  margin-bottom: 16rpx;
+  box-shadow: 0 4rpx 20rpx rgba(255, 107, 138, 0.06);
+}
+
+.re-left {
+  gap: 20rpx;
+}
+
+.re-icon {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 44rpx;
+}
+
+.diary-bg    { background: #FFF0F3; }
+.whisper-bg  { background: #FFF5F0; }
+.album-bg    { background: #F0F5FF; }
+
+.re-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.re-sub {
+  font-size: 24rpx;
+  color: #BBB;
+  margin-top: 6rpx;
+}
+
+.re-arrow {
+  font-size: 36rpx;
+  color: #CCC;
+}
+
+/* 更多入口 */
+.more-entries {
+  gap: 24rpx;
+  justify-content: center;
+}
+
+.more-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24rpx 48rpx;
+  border-radius: 20rpx;
+  background: #FFF5F5;
+}
+
+.me-icon {
+  font-size: 44rpx;
+  margin-bottom: 8rpx;
+}
+
+.me-text {
+  font-size: 26rpx;
+  color: #666;
+}

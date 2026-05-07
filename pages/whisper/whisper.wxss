@@ -1,0 +1,126 @@
+.page {
+  padding-bottom: 140rpx;
+}
+
+/* 悄悄话列表 */
+.whisper-list {
+  margin: 20rpx 24rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.whisper-item {
+  display: flex;
+  max-width: 85%;
+}
+
+.whisper-item.from-him {
+  align-self: flex-start;
+}
+
+.whisper-item.from-her {
+  align-self: flex-end;
+}
+
+.whisper-bubble {
+  padding: 20rpx 24rpx;
+  border-radius: 20rpx;
+  position: relative;
+}
+
+.from-him .whisper-bubble {
+  background: #FFFFFF;
+  border-top-left-radius: 4rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.06);
+}
+
+.from-her .whisper-bubble {
+  background: linear-gradient(135deg, #FFB6C1, #FFD1D9);
+  border-top-right-radius: 4rpx;
+}
+
+.whisper-sender {
+  font-size: 24rpx;
+  color: #FF6B8A;
+  margin-bottom: 8rpx;
+  font-weight: 500;
+}
+
+.whisper-content {
+  font-size: 28rpx;
+  color: #333;
+  line-height: 1.6;
+  word-break: break-all;
+}
+
+.whisper-time {
+  font-size: 22rpx;
+  color: #CCC;
+  margin-top: 8rpx;
+  text-align: right;
+}
+
+/* 空状态 */
+.empty {
+  padding: 120rpx 0;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.empty-emoji {
+  font-size: 80rpx;
+  margin-bottom: 20rpx;
+}
+
+.empty-text {
+  font-size: 30rpx;
+  color: #CCC;
+}
+
+.empty-sub {
+  font-size: 26rpx;
+  color: #DDD;
+  margin-top: 8rpx;
+}
+
+/* 底部输入 */
+.input-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #FFFFFF;
+  padding: 16rpx 24rpx;
+  padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
+  box-shadow: 0 -2rpx 12rpx rgba(0,0,0,0.04);
+  z-index: 10;
+}
+
+.input-wrap {
+  background: #F8F8F8;
+  border-radius: 40rpx;
+  padding: 6rpx 6rpx 6rpx 24rpx;
+}
+
+.whisper-input {
+  flex: 1;
+  height: 72rpx;
+  font-size: 28rpx;
+}
+
+.send-btn {
+  background: linear-gradient(135deg, #FF6B8A, #FF85A2);
+  color: #FFF;
+  border-radius: 36rpx;
+  padding: 16rpx 32rpx;
+  font-size: 26rpx;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.send-btn:active {
+  opacity: 0.8;
+}

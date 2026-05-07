@@ -1,0 +1,7 @@
+<view class="card-wrap {{shadow ? 'has-shadow' : ''}}" style="{{customStyle}}" bindtap="onTap">
+  <view wx:if="{{title || showHeader}}" class="card-header flex-between">
+    <view class="card-title" wx:if="{{title}}">{{title}}</view>
+    <view wx:if="{{moreText}}" class="card-more text-light text-sm" bindtap="onMore">{{moreText}} ›</view>
+  </view>
+  <slot></slot>
+</view>

@@ -1,0 +1,167 @@
+.page {
+  padding: 20rpx 24rpx;
+}
+
+/* 在一起栏 */
+.together-bar {
+  background: linear-gradient(135deg, #FF6B8A, #FF85A2);
+  border-radius: 24rpx;
+  padding: 28rpx 32rpx;
+  margin-bottom: 24rpx;
+  color: #FFFFFF;
+  box-shadow: 0 6rpx 20rpx rgba(255, 107, 138, 0.25);
+}
+
+.tb-icon { font-size: 48rpx; margin-right: 16rpx; }
+.tb-title { font-size: 26rpx; opacity: 0.85; }
+.tb-date { font-size: 28rpx; font-weight: 500; margin-top: 2rpx; text-decoration: underline; text-underline-offset: 4rpx; }
+.tb-days { text-align: center; }
+.tb-days-num { font-size: 56rpx; font-weight: 700; display: block; line-height: 1; }
+.tb-days-label { font-size: 24rpx; opacity: 0.85; }
+
+/* 纪念日列表 */
+.ann-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.ann-item {
+  background: #FFFFFF;
+  border-radius: 20rpx;
+  padding: 20rpx 24rpx;
+  box-shadow: 0 4rpx 16rpx rgba(255, 107, 138, 0.06);
+  align-items: center;
+}
+
+.ann-icon {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 18rpx;
+  background: #FFF5F5;
+  font-size: 36rpx;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+
+.ann-info { flex: 1; }
+.ann-title { font-size: 28rpx; font-weight: 600; color: #333; }
+.ann-date { font-size: 24rpx; color: #BBB; margin-top: 2rpx; }
+
+.ann-countdown {
+  flex-shrink: 0;
+  text-align: center;
+  margin-right: 8rpx;
+}
+
+.cd-num { font-size: 36rpx; font-weight: 700; color: #FF6B8A; display: block; line-height: 1; }
+.cd-label { font-size: 22rpx; color: #999; }
+.today-badge { background: linear-gradient(135deg, #FF6B8A, #FF85A2); color: #FFF; font-size: 22rpx; padding: 8rpx 16rpx; border-radius: 16rpx; white-space: nowrap; }
+
+.ann-delete {
+  width: 48rpx;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #DDD;
+  font-size: 28rpx;
+  flex-shrink: 0;
+}
+
+.ann-delete:active { color: #FF6B8A; }
+
+/* 空状态 */
+.empty { padding: 60rpx 0; text-align: center; }
+.empty-text { font-size: 28rpx; color: #CCC; }
+
+/* 添加按钮 */
+.add-bar {
+  position: fixed;
+  bottom: 20rpx;
+  left: 24rpx;
+  right: 24rpx;
+  background: linear-gradient(135deg, #FFF5F7, #FFEEF2);
+  border: 2rpx dashed #FFB6C1;
+  border-radius: 20rpx;
+  padding: 24rpx;
+  font-size: 28rpx;
+  color: #FF6B8A;
+  text-align: center;
+}
+
+/* 弹窗 */
+.overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-card {
+  background: #FFFFFF;
+  border-radius: 24rpx;
+  padding: 40rpx 32rpx;
+  width: 560rpx;
+}
+
+.modal-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333;
+  text-align: center;
+  margin-bottom: 28rpx;
+}
+
+.form-row {
+  margin-bottom: 18rpx;
+  display: flex;
+  align-items: center;
+}
+
+.form-label {
+  width: 120rpx;
+  font-size: 26rpx;
+  color: #666;
+  flex-shrink: 0;
+}
+
+.form-input {
+  flex: 1;
+  background: #F8F8F8;
+  border-radius: 12rpx;
+  padding: 18rpx 20rpx;
+  font-size: 28rpx;
+}
+
+.form-input.short {
+  flex: none;
+  width: 120rpx;
+  text-align: center;
+}
+
+.form-picker {
+  background: #F8F8F8;
+  border-radius: 12rpx;
+  padding: 18rpx 20rpx;
+  font-size: 28rpx;
+  color: #FF6B8A;
+}
+
+.date-picker-big {
+  background: #F8F8F8;
+  border-radius: 16rpx;
+  padding: 28rpx;
+  text-align: center;
+  font-size: 32rpx;
+  color: #FF6B8A;
+  font-weight: 500;
+}
+
+.modal-btns { gap: 16rpx; margin-top: 8rpx; }
+.mbtn { flex: 1; padding: 22rpx 0; border-radius: 16rpx; text-align: center; font-size: 28rpx; font-weight: 500; }
+.mbtn.cancel { background: #F5F5F5; color: #999; }
+.mbtn.confirm { background: linear-gradient(135deg, #FF6B8A, #FF85A2); color: #FFF; }

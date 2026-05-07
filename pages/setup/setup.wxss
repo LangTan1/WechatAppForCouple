@@ -1,0 +1,263 @@
+.page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #FFF5F5 0%, #FFEEF2 50%, #FFF5F5 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 80rpx 40rpx 40rpx;
+  box-sizing: border-box;
+}
+
+/* 欢迎区 */
+.welcome-area {
+  text-align: center;
+  margin-bottom: 60rpx;
+}
+
+.welcome-area.small {
+  margin-bottom: 40rpx;
+}
+
+.welcome-emoji {
+  font-size: 100rpx;
+  display: block;
+  margin-bottom: 20rpx;
+}
+
+.welcome-title {
+  font-size: 44rpx;
+  font-weight: 700;
+  color: #FF6B8A;
+  display: block;
+  margin-bottom: 12rpx;
+}
+
+.welcome-sub {
+  font-size: 28rpx;
+  color: #BBB;
+  display: block;
+}
+
+/* 表单 */
+.setup-form {
+  width: 100%;
+}
+
+.form-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333;
+  text-align: center;
+  margin-bottom: 8rpx;
+}
+
+.form-desc {
+  font-size: 26rpx;
+  color: #BBB;
+  text-align: center;
+  margin-bottom: 40rpx;
+  line-height: 1.6;
+}
+
+.key-input {
+  background: #FFFFFF;
+  border-radius: 16rpx;
+  padding: 28rpx 24rpx;
+  font-size: 32rpx;
+  text-align: center;
+  letter-spacing: 8rpx;
+  box-shadow: 0 4rpx 20rpx rgba(255, 107, 138, 0.08);
+  margin-bottom: 16rpx;
+}
+
+.key-hint {
+  color: #FF6B8A;
+  font-size: 24rpx;
+  text-align: center;
+  margin-bottom: 30rpx;
+}
+
+.form-item {
+  margin-bottom: 28rpx;
+}
+
+.form-label {
+  font-size: 28rpx;
+  color: #666;
+  margin-bottom: 12rpx;
+  font-weight: 500;
+}
+
+.form-input {
+  background: #FFFFFF;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  font-size: 28rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04);
+}
+
+.picker-input {
+  color: #FF6B8A;
+}
+
+.lock-switch {
+  background: #FFFFFF;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  font-size: 28rpx;
+  color: #333;
+  box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04);
+}
+
+/* 按钮 */
+.btn-primary {
+  background: linear-gradient(135deg, #FF6B8A, #FF85A2);
+  color: #FFFFFF;
+  border-radius: 48rpx;
+  padding: 28rpx;
+  text-align: center;
+  font-size: 32rpx;
+  font-weight: 600;
+  margin-top: 32rpx;
+  box-shadow: 0 8rpx 24rpx rgba(255, 107, 138, 0.35);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.btn-primary:active {
+  opacity: 0.85;
+}
+
+/* 解锁 */
+.unlock-area {
+  width: 100%;
+}
+
+.pin-dots {
+  gap: 24rpx;
+  margin-bottom: 40rpx;
+}
+
+.pin-dot {
+  width: 28rpx;
+  height: 28rpx;
+  border-radius: 50%;
+  border: 3rpx solid #FFB6C1;
+  background: transparent;
+  transition: all 0.2s;
+}
+
+.pin-dot.filled {
+  background: #FF6B8A;
+  border-color: #FF6B8A;
+  transform: scale(1.1);
+}
+
+.pin-error {
+  text-align: center;
+  color: #FF6B8A;
+  font-size: 26rpx;
+  margin-bottom: 20rpx;
+  min-height: 36rpx;
+}
+
+/* 数字键盘 */
+.num-pad {
+  width: 100%;
+}
+
+.num-row {
+  justify-content: center;
+  gap: 0;
+}
+
+.num-key {
+  flex: 1;
+  height: 100rpx;
+  font-size: 36rpx;
+  color: #333;
+  font-weight: 500;
+  border-radius: 16rpx;
+  margin: 8rpx;
+  background: #FFFFFF;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04);
+}
+
+.num-key:active {
+  background: #FFEEF2;
+}
+
+.num-key.empty {
+  background: transparent;
+  box-shadow: none;
+}
+
+.unlock-actions {
+  margin-top: 40rpx;
+  padding: 0 20rpx;
+}
+
+.action-link {
+  font-size: 26rpx;
+  color: #BBB;
+  padding: 10rpx;
+}
+
+.action-link:active {
+  color: #FF6B8A;
+}
+
+/* 表单分隔线 */
+.form-divider {
+  text-align: center;
+  font-size: 24rpx;
+  color: #DDD;
+  margin: 32rpx 0 16rpx;
+}
+
+.form-desc-sm {
+  font-size: 24rpx;
+  color: #BBB;
+  text-align: center;
+  margin-bottom: 24rpx;
+  line-height: 1.5;
+}
+
+/* 弹窗 */
+.overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.modal-card {
+  background: #FFFFFF;
+  border-radius: 24rpx;
+  padding: 40rpx 32rpx;
+  width: 560rpx;
+}
+
+.modal-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333;
+  text-align: center;
+  margin-bottom: 12rpx;
+}
+
+.modal-desc {
+  font-size: 26rpx;
+  color: #999;
+  text-align: center;
+  margin-bottom: 20rpx;
+}
+
+.modal-btns { gap: 16rpx; }
+.mbtn { flex: 1; padding: 22rpx 0; border-radius: 16rpx; text-align: center; font-size: 28rpx; font-weight: 500; }
+.mbtn.cancel { background: #F5F5F5; color: #999; }
+.mbtn.confirm { background: linear-gradient(135deg, #FF6B8A, #FF85A2); color: #FFF; }
+.mbtn.confirm.warn { background: linear-gradient(135deg, #FF4444, #FF6B6B); }

@@ -1,0 +1,120 @@
+<view class="page">
+  <!-- 顶部日期 & 在一起天数 -->
+  <view class="header-card">
+    <view class="date-row flex-between">
+      <view class="date-text">{{dateStr}}</view>
+      <view class="weekday">{{weekday}}</view>
+    </view>
+    <view class="days-row flex-center">
+      <text class="heart-icon">💕</text>
+      <text class="days-num">{{togetherDays}}</text>
+      <text class="days-label">天</text>
+    </view>
+    <view class="days-sub">我们已经在一起</view>
+  </view>
+
+  <!-- 天气卡片 -->
+  <view class="weather-card" wx:if="{{weather}}">
+    <view class="weather-location" wx:if="{{weather.location}}">{{weather.location}}</view>
+    <view class="weather-main flex-row">
+      <view class="weather-icon">{{weather.icon}}</view>
+      <view class="weather-info">
+        <view class="weather-temp">
+          <text class="temp-now">{{weather.temp}}°</text>
+          <text class="temp-range">{{weather.minTemp}}° ~ {{weather.maxTemp}}°</text>
+        </view>
+        <view class="weather-text">{{weather.text}}</view>
+      </view>
+    </view>
+    <view class="weather-partners flex-row">
+      <view class="partner-item">
+        <text class="partner-name">{{weather.boyName || '浪'}}</text>
+        <text class="partner-temp">{{weather.icon}} {{weather.temp}}°</text>
+      </view>
+      <view class="partner-divider">|</view>
+      <view class="partner-item">
+        <text class="partner-name">{{weather.girlName || '琳琳'}}</text>
+        <text class="partner-temp">{{weather.icon}} {{weather.temp}}°</text>
+      </view>
+    </view>
+    <view class="weather-clothing flex-row">
+      <text class="clothing-icon">{{weather.clothingIcon}}</text>
+      <text class="clothing-text">{{weather.clothing}}</text>
+    </view>
+  </view>
+
+  <!-- 纪念日倒计时提醒 -->
+  <view class="reminder-card" wx:if="{{upcomingAnniversaries.length > 0}}" bindtap="goAnniversary">
+    <view class="reminder-row flex-row" wx:for="{{upcomingAnniversaries}}" wx:key="id">
+      <text class="reminder-icon">{{item.icon || '💝'}}</text>
+      <view class="reminder-info">
+        <text class="reminder-days">{{item.daysLeft === 0 ? '就是今天' : item.daysLeft + '天后'}}</text>
+        <text class="reminder-title">{{item.title}}</text>
+      </view>
+      <text class="reminder-arrow">›</text>
+    </view>
+    <view class="reminder-hint">别忘了提前准备哦～</view>
+  </view>
+
+  <!-- 每日情话 -->
+  <view class="quote-card" wx:if="{{dailyQuote}}">
+    <text class="quote-mark">"</text>
+    <text class="quote-text">{{dailyQuote}}</text>
+    <text class="quote-mark right">"</text>
+  </view>
+
+  <!-- 今日菜单区 -->
+  <c-card title="今天想…" shadow="{{false}}" customStyle="background: linear-gradient(135deg, #FFF5F7, #FFEEF2);">
+    <view class="today-menu flex-row">
+      <view class="menu-entry" bindtap="goMenu">
+        <view class="entry-icon">🍽️</view>
+        <view class="entry-label">吃什么</view>
+      </view>
+      <view class="menu-entry" bindtap="goDiary">
+        <view class="entry-icon">📝</view>
+        <view class="entry-label">做了什么</view>
+      </view>
+      <view class="menu-entry" bindtap="goWhisper">
+        <view class="entry-icon">💌</view>
+        <view class="entry-label">想说什么</view>
+      </view>
+    </view>
+  </c-card>
+
+  <!-- 快捷卡片区 -->
+  <view class="quick-cards flex-row">
+    <view class="quick-card" bindtap="goAlbum">
+      <view class="qc-icon">📸</view>
+      <view class="qc-title">时光相册</view>
+      <view class="qc-sub">{{albumCount}} 张回忆</view>
+    </view>
+    <view class="quick-card" bindtap="goAnniversary">
+      <view class="qc-icon">💝</view>
+      <view class="qc-title">纪念日</view>
+      <view class="qc-sub">{{nextAnniversary}}</view>
+    </view>
+  </view>
+
+  <view class="quick-cards flex-row" style="margin-top: 0;">
+    <view class="quick-card quick-card-full" bindtap="goWishlist">
+      <view class="qc-icon">✨</view>
+      <view class="qc-title">愿望清单</view>
+      <view class="qc-sub">{{wishCount}} 个未完成心愿</view>
+    </view>
+  </view>
+
+  <!-- 最近动态 -->
+  <c-card title="最近动态" moreText="全部" bindmore="goRecord">
+    <view class="activity-list">
+      <view class="activity-item flex-row" wx:for="{{activities}}" wx:key="id" wx:for-item="act">
+        <view class="act-dot {{act.type}}"></view>
+        <view class="act-content">
+          <view class="act-text">{{act.text}}</view>
+          <view class="act-time">{{act.time}}</view>
+        </view>
+      </view>
+    </view>
+  </c-card>
+
+  <view style="height: 40rpx;"></view>
+</view>

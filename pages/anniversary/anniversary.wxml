@@ -1,0 +1,104 @@
+<view class="page">
+  <!-- 在一起天数（可修改） -->
+  <view class="together-bar flex-between">
+    <view class="flex-row">
+      <text class="tb-icon">💕</text>
+      <view>
+        <view class="tb-title">在一起</view>
+        <view class="tb-date" bindtap="editTogetherDate">{{togetherDateStr}}</view>
+      </view>
+    </view>
+    <view class="tb-days">
+      <text class="tb-days-num">{{togetherDays}}</text>
+      <text class="tb-days-label">天</text>
+    </view>
+  </view>
+
+  <!-- 纪念日列表 -->
+  <view class="ann-list">
+    <view class="ann-item flex-row" wx:for="{{anniversaries}}" wx:key="id">
+      <view class="ann-icon flex-center">{{item.icon || '💝'}}</view>
+      <view class="ann-info">
+        <view class="ann-title">{{item.title}}</view>
+        <view class="ann-date">{{item.displayDate}}</view>
+      </view>
+      <view class="ann-countdown flex-center" bindtap="editAnniversary" data-item="{{item}}">
+        <view class="cd-days" wx:if="{{item.daysLeft > 0}}">
+          <text class="cd-num">{{item.daysLeft}}</text>
+          <text class="cd-label">天后</text>
+        </view>
+        <view class="cd-today" wx:elif="{{item.daysLeft === 0}}">
+          <text class="today-badge">就是今天 🎉</text>
+        </view>
+        <view class="cd-past" wx:else>
+          <text class="cd-num">{{-item.daysLeft}}</text>
+          <text class="cd-label">天前</text>
+        </view>
+      </view>
+      <view class="ann-delete" bindtap="deleteAnniversary" data-id="{{item.id}}">
+        <text>✕</text>
+      </view>
+    </view>
+
+    <view class="empty" wx:if="{{anniversaries.length === 0}}">
+      <text class="empty-text">还没有纪念日哦～</text>
+    </view>
+  </view>
+
+  <!-- 添加按钮 -->
+  <view class="add-bar flex-center" bindtap="showAdd">
+    <text>+ 添加纪念日</text>
+  </view>
+
+  <!-- 编辑弹窗 -->
+  <view class="overlay" wx:if="{{showModal}}" bindtap="hideModal">
+    <view class="modal-card" catchtap="noop">
+      <view class="modal-title">{{editingId ? '编辑' : '添加'}}纪念日</view>
+
+      <view class="form-row">
+        <text class="form-label">标题</text>
+        <input class="form-input" placeholder="纪念日名称" value="{{formTitle}}" bindinput="onFormTitle" maxlength="20" />
+      </view>
+
+      <view class="form-row">
+        <text class="form-label">图标</text>
+        <input class="form-input short" placeholder="💝" value="{{formIcon}}" bindinput="onFormIcon" maxlength="4" />
+      </view>
+
+      <view class="form-row">
+        <text class="form-label">日期</text>
+        <picker mode="date" value="{{formDate}}" bindchange="onFormDate">
+          <view class="form-picker">{{formDate || '选择日期'}}</view>
+        </picker>
+      </view>
+
+      <view class="form-row">
+        <text class="form-label">类型</text>
+        <picker range="{{['每年重复','仅此一次']}}" value="{{formType === 'annual' ? 0 : 1}}" bindchange="onFormType">
+          <view class="form-picker">{{formType === 'annual' ? '每年重复' : '仅此一次'}}</view>
+        </picker>
+      </view>
+
+      <view class="modal-btns flex-row">
+        <view class="mbtn cancel" bindtap="hideModal">取消</view>
+        <view class="mbtn confirm" bindtap="saveAnniversary">保存</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 修改在一起日期弹窗 -->
+  <view class="overlay" wx:if="{{showDatePicker}}" bindtap="hideDatePicker">
+    <view class="modal-card" catchtap="noop">
+      <view class="modal-title">修改在一起的日子</view>
+      <picker mode="date" value="{{togetherDate}}" bindchange="onTogetherDateChange">
+        <view class="date-picker-big">{{togetherDate || '选择日期'}}</view>
+      </picker>
+      <view class="modal-btns flex-row" style="margin-top: 24rpx;">
+        <view class="mbtn cancel" bindtap="hideDatePicker">取消</view>
+        <view class="mbtn confirm" bindtap="saveTogetherDate">确定</view>
+      </view>
+    </view>
+  </view>
+
+  <view style="height: 120rpx;"></view>
+</view>

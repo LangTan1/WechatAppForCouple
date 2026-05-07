@@ -1,0 +1,83 @@
+/* 全局样式 - 琳的生活菜单 */
+page {
+  --primary: #FF6B8A;
+  --primary-light: #FFB6C1;
+  --primary-lighter: #FFE0E6;
+  --bg: #FFF5F5;
+  --white: #FFFFFF;
+  --text: #333333;
+  --text-light: #999999;
+  --text-lighter: #CCCCCC;
+  --shadow: 0 4rpx 20rpx rgba(255, 107, 138, 0.1);
+  --radius: 16rpx;
+  --radius-lg: 24rpx;
+
+  background-color: var(--bg);
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: 28rpx;
+  color: var(--text);
+  box-sizing: border-box;
+}
+
+/* 通用卡片样式 */
+.card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 24rpx;
+  margin: 20rpx 24rpx;
+  box-shadow: var(--shadow);
+}
+
+/* 通用按钮 */
+.btn-primary {
+  background: linear-gradient(135deg, #FF6B8A, #FF85A2);
+  color: #FFFFFF;
+  border-radius: 40rpx;
+  padding: 20rpx 48rpx;
+  text-align: center;
+  font-size: 30rpx;
+  font-weight: 500;
+  border: none;
+}
+
+.btn-primary:active {
+  opacity: 0.85;
+}
+
+/* Flex 工具 */
+.flex-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.flex-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* 文字工具 */
+.text-primary { color: var(--primary); }
+.text-light  { color: var(--text-light); }
+.text-sm     { font-size: 24rpx; }
+.text-lg     { font-size: 36rpx; }
+.text-center { text-align: center; }
+.font-bold   { font-weight: 600; }
+
+/* 间距 */
+.mt-20 { margin-top: 20rpx; }
+.mt-30 { margin-top: 30rpx; }
+.mb-20 { margin-bottom: 20rpx; }
+.p-20  { padding: 20rpx; }

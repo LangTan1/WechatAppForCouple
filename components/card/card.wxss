@@ -1,0 +1,38 @@
+.card-wrap {
+  background: #FFFFFF;
+  border-radius: 24rpx;
+  padding: 24rpx;
+  margin: 20rpx 24rpx;
+}
+
+.has-shadow {
+  box-shadow: 0 4rpx 20rpx rgba(255, 107, 138, 0.1);
+}
+
+.card-header {
+  margin-bottom: 16rpx;
+}
+
+.card-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333333;
+  position: relative;
+  padding-left: 20rpx;
+}
+
+.card-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6rpx;
+  height: 28rpx;
+  background: linear-gradient(180deg, #FF6B8A, #FFB6C1);
+  border-radius: 3rpx;
+}
+
+.card-more {
+  color: #FF6B8A;
+}

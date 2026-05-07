@@ -1,0 +1,55 @@
+<view class="page">
+  <!-- 进度统计 -->
+  <c-card title="心愿进度" customStyle="text-align: center;">
+    <view class="progress-bar">
+      <view class="progress-fill" style="width: {{progressPercent}}%;"></view>
+    </view>
+    <view class="progress-text">{{doneCount}} / {{totalCount}} 已完成</view>
+  </c-card>
+
+  <!-- 未完成 -->
+  <c-card title="待完成 ✨" wx:if="{{undoneItems.length > 0}}">
+    <view class="wish-item flex-row" wx:for="{{undoneItems}}" wx:key="id">
+      <view class="wish-emoji">{{item.emoji}}</view>
+      <view class="wish-title {{item.done ? 'done' : ''}}">{{item.title}}</view>
+      <view class="wish-check flex-center" bindtap="toggleWish" data-id="{{item.id}}">
+        <text>○</text>
+      </view>
+    </view>
+  </c-card>
+
+  <!-- 已完成 -->
+  <c-card title="已完成 🎉" wx:if="{{doneItems.length > 0}}">
+    <view class="wish-item flex-row" wx:for="{{doneItems}}" wx:key="id">
+      <view class="wish-emoji">{{item.emoji}}</view>
+      <view class="wish-title done">{{item.title}}</view>
+      <view class="wish-check checked flex-center" bindtap="toggleWish" data-id="{{item.id}}">
+        <text>✓</text>
+      </view>
+    </view>
+  </c-card>
+
+  <!-- 空状态 -->
+  <view class="empty" wx:if="{{totalCount === 0}}">
+    <text class="empty-text">还没有心愿哦～</text>
+  </view>
+
+  <!-- 新增按钮 -->
+  <view class="add-bar flex-center" bindtap="showAdd">
+    <text>+ 添加心愿</text>
+  </view>
+
+  <!-- 新增弹窗 -->
+  <view class="modal-mask" wx:if="{{showModal}}" bindtap="hideModal">
+    <view class="modal-content" catchtap="noop">
+      <view class="modal-title">添加心愿</view>
+      <input class="modal-input" placeholder="写下你们想一起做的事..." value="{{newWish}}" bindinput="onInput" maxlength="50" />
+      <view class="modal-btns flex-row">
+        <view class="modal-btn cancel" bindtap="hideModal">取消</view>
+        <view class="modal-btn confirm" bindtap="addWish">添加</view>
+      </view>
+    </view>
+  </view>
+
+  <view style="height: 40rpx;"></view>
+</view>

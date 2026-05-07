@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "记录",
+  "usingComponents": {
+    "c-card": "/components/card/card"
+  }
+}

@@ -1,0 +1,129 @@
+<view class="page">
+  <!-- 首次设置：开发者密钥 -->
+  <view wx:if="{{step === 'dev_key'}}">
+    <view class="welcome-area">
+      <text class="welcome-emoji">💕</text>
+      <text class="welcome-title">琳的生活菜单</text>
+      <text class="welcome-sub">专属于你们的小宇宙</text>
+    </view>
+
+    <view class="setup-form">
+      <view class="form-title">请输入密钥</view>
+      <view class="form-desc">首次使用需要开发者密钥进行初始化</view>
+      <input
+        class="key-input"
+        type="password"
+        placeholder="请输入密钥"
+        value="{{inputKey}}"
+        bindinput="onKeyInput"
+        maxlength="20"
+      />
+      <view class="key-hint" wx:if="{{keyError}}">{{keyError}}</view>
+      <view class="btn-primary" bindtap="verifyDevKey">验证</view>
+    </view>
+  </view>
+
+  <!-- 设置情侣信息 -->
+  <view wx:if="{{step === 'setup_info'}}">
+    <view class="welcome-area small">
+      <text class="welcome-emoji">💝</text>
+      <text class="welcome-title">设置你们的信息</text>
+    </view>
+
+    <view class="setup-form">
+      <view class="form-item">
+        <view class="form-label">👨 男生昵称</view>
+        <input class="form-input" placeholder="输入他的名字" value="{{boyName}}" bindinput="onBoyName" maxlength="10" />
+      </view>
+
+      <view class="form-item">
+        <view class="form-label">👩 女生昵称</view>
+        <input class="form-input" placeholder="输入她的名字" value="{{girlName}}" bindinput="onGirlName" maxlength="10" />
+      </view>
+
+      <view class="form-item">
+        <view class="form-label">💕 在一起的日子</view>
+        <picker mode="date" value="{{togetherDate}}" bindchange="onDateChange">
+          <view class="form-input picker-input">{{togetherDate || '选择日期'}}</view>
+        </picker>
+      </view>
+
+      <view class="form-divider">── 创建使用者密钥 ──</view>
+      <view class="form-desc-sm">这是琳琳的专属密钥，请告诉她</view>
+
+      <view class="form-item">
+        <view class="form-label">🔑 使用者密钥</view>
+        <input class="form-input" type="password" placeholder="设置一个密钥给琳琳" value="{{userKey}}" bindinput="onUserKey" maxlength="20" />
+      </view>
+
+      <view class="form-item">
+        <view class="form-label">🔒 应用锁（可选）</view>
+        <view class="lock-switch flex-between">
+          <text>开启应用锁</text>
+          <switch checked="{{lockEnabled}}" bindchange="onLockSwitch" color="#FF6B8A" />
+        </view>
+        <input
+          wx:if="{{lockEnabled}}"
+          class="form-input mt-20"
+          type="password"
+          placeholder="设置4位数字密码"
+          value="{{lockPin}}"
+          bindinput="onLockPin"
+          maxlength="4"
+        />
+      </view>
+
+      <view class="btn-primary" bindtap="finishSetup">完成设置 💕</view>
+    </view>
+  </view>
+
+  <!-- 日常解锁 -->
+  <view wx:if="{{step === 'unlock'}}">
+    <view class="welcome-area">
+      <text class="welcome-emoji">🔐</text>
+      <text class="welcome-title">{{boyName}} & {{girlName}}</text>
+      <text class="welcome-sub">输入密码打开你们的小世界</text>
+    </view>
+
+    <view class="unlock-area">
+      <view class="pin-dots flex-center">
+        <view class="pin-dot {{pinInput.length >= 1 ? 'filled' : ''}}"></view>
+        <view class="pin-dot {{pinInput.length >= 2 ? 'filled' : ''}}"></view>
+        <view class="pin-dot {{pinInput.length >= 3 ? 'filled' : ''}}"></view>
+        <view class="pin-dot {{pinInput.length >= 4 ? 'filled' : ''}}"></view>
+      </view>
+      <view class="pin-error" wx:if="{{pinError}}">{{pinError}}</view>
+
+      <view class="num-pad">
+        <view class="num-row flex-row" wx:for="{{numRows}}" wx:key="*this">
+          <view
+            class="num-key flex-center {{cell === '' ? 'empty' : ''}}"
+            wx:for="{{item}}" wx:key="*this" wx:for-item="cell"
+            bindtap="onNumTap" data-num="{{cell}}"
+          >
+            <text wx:if="{{cell !== ''}}">{{cell}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="unlock-actions flex-between">
+        <text class="action-link" bindtap="showDevReset">开发者重置</text>
+        <text class="action-link" bindtap="deletePin">删除</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 开发者重置弹窗 -->
+  <view class="overlay" wx:if="{{showDevModal}}" bindtap="hideDevModal">
+    <view class="modal-card" catchtap="noop">
+      <view class="modal-title">🔧 开发者重置</view>
+      <view class="modal-desc">输入开发者密钥以重置应用</view>
+      <input class="key-input" type="password" placeholder="开发者密钥" value="{{devResetKey}}" bindinput="onDevResetKey" maxlength="20" />
+      <view class="key-hint" wx:if="{{devResetError}}">{{devResetError}}</view>
+      <view class="modal-btns flex-row" style="margin-top: 20rpx;">
+        <view class="mbtn cancel" bindtap="hideDevModal">取消</view>
+        <view class="mbtn confirm warn" bindtap="confirmDevReset">确认重置</view>
+      </view>
+    </view>
+  </view>
+</view>

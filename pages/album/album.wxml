@@ -1,0 +1,138 @@
+<view class="page">
+  <!-- 相册列表视图 -->
+  <view wx:if="{{view === 'albums'}}">
+    <view class="section-title">📸 时光相册</view>
+    <view class="album-list">
+      <view class="album-card" wx:for="{{albums}}" wx:key="id" bindtap="openAlbum" data-id="{{item.id}}">
+        <view class="album-cover flex-center">
+          <image wx:if="{{item.cover}}" src="{{item.cover}}" mode="aspectFill" class="cover-img" />
+          <text wx:else class="cover-emoji">📸</text>
+        </view>
+        <view class="album-info">
+          <view class="album-name">{{item.name}}</view>
+          <view class="album-desc" wx:if="{{item.desc}}">{{item.desc}}</view>
+          <view class="album-meta">{{item.photos.length || 0}} 张照片</view>
+        </view>
+        <view class="album-arrow">›</view>
+      </view>
+
+      <view class="empty" wx:if="{{albums.length === 0}}">
+        <text class="empty-emoji">📸</text>
+        <text class="empty-text">还没有相册哦～</text>
+        <text class="empty-sub">创建一个相册记录你们的回忆吧</text>
+      </view>
+    </view>
+
+    <!-- 添加相册 FAB -->
+    <view class="add-fab flex-center" bindtap="showAddAlbum">
+      <text class="fab-icon">+</text>
+    </view>
+  </view>
+
+  <!-- 相册内照片视图 -->
+  <view wx:if="{{view === 'photos'}}">
+    <view class="photo-header flex-between">
+      <view class="back-btn flex-row" bindtap="backToAlbums">
+        <text class="back-arrow">‹</text>
+        <text>相册</text>
+      </view>
+      <view class="photo-album-name">{{currentAlbum.name}}</view>
+      <view class="back-btn" bindtap="editAlbumDesc">编辑</view>
+    </view>
+
+    <view class="album-desc-bar" wx:if="{{currentAlbum.desc}}" bindtap="editAlbumDesc">
+      <text>💬 {{currentAlbum.desc}}</text>
+    </view>
+
+    <view class="photo-grid">
+      <view class="photo-item" wx:for="{{currentAlbum.photos}}" wx:key="id" bindtap="viewPhoto" data-photo="{{item}}" data-index="{{index}}">
+        <view class="photo-wrap">
+          <image wx:if="{{item.url}}" src="{{item.url}}" mode="aspectFill" class="photo-img" />
+          <text wx:else class="photo-emoji">{{item.emoji || '📸'}}</text>
+        </view>
+        <view class="photo-desc-row flex-between">
+          <text class="photo-desc-text">{{item.desc || '未命名'}}</text>
+          <text class="photo-date-text">{{item.date}}</text>
+        </view>
+      </view>
+
+      <view class="empty" wx:if="{{currentAlbum.photos.length === 0}}">
+        <text class="empty-emoji">🖼️</text>
+        <text class="empty-text">相册还是空的</text>
+        <text class="empty-sub">点击下方按钮添加照片</text>
+      </view>
+    </view>
+
+    <view class="add-fab flex-center" bindtap="addPhotoToAlbum">
+      <text class="fab-icon">+</text>
+    </view>
+  </view>
+
+  <!-- 照片预览 -->
+  <view class="preview-overlay" wx:if="{{previewPhoto}}" bindtap="closePreview">
+    <image wx:if="{{previewPhoto.url}}" src="{{previewPhoto.url}}" mode="aspectFit" class="preview-img" />
+    <text wx:else class="preview-emoji">{{previewPhoto.emoji || '📸'}}</text>
+    <view class="preview-info">
+      <text class="preview-desc">{{previewPhoto.desc || '未命名'}}</text>
+      <text class="preview-date">{{previewPhoto.date}}</text>
+    </view>
+  </view>
+
+  <!-- 添加相册弹窗 -->
+  <view class="overlay" wx:if="{{showAlbumModal}}" bindtap="hideAlbumModal">
+    <view class="modal-card" catchtap="noop">
+      <view class="modal-title">创建新相册</view>
+      <view class="form-row">
+        <text class="form-label">相册名称</text>
+        <input class="form-input" placeholder="给相册取个名字" value="{{albumForm.name}}" bindinput="onAlbumName" maxlength="20" />
+      </view>
+      <view class="form-row">
+        <text class="form-label">描述</text>
+        <input class="form-input" placeholder="这个相册记录了什么？" value="{{albumForm.desc}}" bindinput="onAlbumDesc" maxlength="50" />
+      </view>
+      <view class="modal-btns flex-row">
+        <view class="mbtn cancel" bindtap="hideAlbumModal">取消</view>
+        <view class="mbtn confirm" bindtap="createAlbum">创建</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 编辑相册描述弹窗 -->
+  <view class="overlay" wx:if="{{showEditAlbumModal}}" bindtap="hideEditAlbumModal">
+    <view class="modal-card" catchtap="noop">
+      <view class="modal-title">编辑「{{currentAlbum.name}}」</view>
+      <view class="form-row">
+        <text class="form-label">名称</text>
+        <input class="form-input" value="{{currentAlbum.name}}" bindinput="onEditAlbumName" maxlength="20" />
+      </view>
+      <view class="form-row">
+        <text class="form-label">描述</text>
+        <textarea class="form-textarea" placeholder="写下这个相册的故事…" value="{{currentAlbum.desc}}" bindinput="onEditAlbumDesc" maxlength="200" auto-height />
+      </view>
+      <view class="modal-btns flex-row">
+        <view class="mbtn cancel" bindtap="hideEditAlbumModal">取消</view>
+        <view class="mbtn" style="background:#FFF0F0;color:#FF6B8A;" bindtap="deleteAlbum">删除相册</view>
+        <view class="mbtn confirm" bindtap="saveAlbum">保存</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 添加照片弹窗 -->
+  <view class="overlay" wx:if="{{showPhotoModal}}" bindtap="hidePhotoModal">
+    <view class="modal-card" catchtap="noop">
+      <view class="modal-title">添加照片到「{{currentAlbum.name}}」</view>
+      <view class="photo-preview-box flex-center" bindtap="choosePhoto">
+        <image wx:if="{{photoForm.url}}" src="{{photoForm.url}}" mode="aspectFill" class="photo-preview-img" />
+        <text wx:else class="photo-preview-placeholder">点击选择照片 📷</text>
+      </view>
+      <view class="form-row">
+        <text class="form-label">照片描述</text>
+        <input class="form-input" placeholder="这张照片记录了什么？" value="{{photoForm.desc}}" bindinput="onPhotoDesc" maxlength="50" />
+      </view>
+      <view class="modal-btns flex-row">
+        <view class="mbtn cancel" bindtap="hidePhotoModal">取消</view>
+        <view class="mbtn confirm" bindtap="savePhoto">保存</view>
+      </view>
+    </view>
+  </view>
+</view>

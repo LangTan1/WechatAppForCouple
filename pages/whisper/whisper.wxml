@@ -1,0 +1,37 @@
+<view class="page">
+  <!-- 悄悄话列表 -->
+  <view class="whisper-list">
+    <view class="whisper-item {{item.isBoy ? 'from-him' : 'from-her'}}" wx:for="{{whispers}}" wx:key="id">
+      <view class="whisper-bubble">
+        <view class="whisper-sender">{{item.sender}}</view>
+        <view class="whisper-content">{{item.content}}</view>
+        <view class="whisper-time">{{item.time}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="empty" wx:if="{{whispers.length === 0}}">
+    <text class="empty-emoji">💌</text>
+    <text class="empty-text">还没有悄悄话哦～</text>
+    <text class="empty-sub">轻轻敲醒你沉睡的心灵</text>
+  </view>
+
+  <!-- 输入栏 -->
+  <view class="input-bar">
+    <view class="input-wrap flex-row">
+      <input
+        class="whisper-input"
+        placeholder="说句悄悄话..."
+        value="{{inputText}}"
+        bindinput="onInput"
+        confirm-type="send"
+        bindconfirm="sendWhisper"
+        maxlength="200"
+      />
+      <view class="send-btn flex-center" bindtap="sendWhisper">
+        <text>发送</text>
+      </view>
+    </view>
+  </view>
+</view>

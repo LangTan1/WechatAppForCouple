@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "愿望清单",
+  "usingComponents": {
+    "c-card": "/components/card/card"
+  }
+}

@@ -1,0 +1,53 @@
+<view class="page">
+  <!-- 子模块入口 -->
+  <view class="record-entries">
+    <view class="record-entry flex-between" bindtap="goDiary">
+      <view class="re-left flex-row">
+        <view class="re-icon diary-bg">📝</view>
+        <view>
+          <view class="re-title">恋爱日记</view>
+          <view class="re-sub">记录在一起的每一天</view>
+        </view>
+      </view>
+      <text class="re-arrow">›</text>
+    </view>
+
+    <view class="record-entry flex-between" bindtap="goWhisper">
+      <view class="re-left flex-row">
+        <view class="re-icon whisper-bg">💌</view>
+        <view>
+          <view class="re-title">悄悄话</view>
+          <view class="re-sub">只对你说的甜言蜜语</view>
+        </view>
+      </view>
+      <text class="re-arrow">›</text>
+    </view>
+
+    <view class="record-entry flex-between" bindtap="goAlbum">
+      <view class="re-left flex-row">
+        <view class="re-icon album-bg">📸</view>
+        <view>
+          <view class="re-title">时光相册</view>
+          <view class="re-sub">每一帧都是爱的回忆</view>
+        </view>
+      </view>
+      <text class="re-arrow">›</text>
+    </view>
+  </view>
+
+  <!-- 快捷入口 -->
+  <c-card title="更多">
+    <view class="more-entries flex-row">
+      <view class="more-entry" bindtap="goAnniversary">
+        <view class="me-icon">💝</view>
+        <view class="me-text">纪念日</view>
+      </view>
+      <view class="more-entry" bindtap="goWishlist">
+        <view class="me-icon">✨</view>
+        <view class="me-text">愿望清单</view>
+      </view>
+    </view>
+  </c-card>
+
+  <view style="height: 40rpx;"></view>
+</view>
