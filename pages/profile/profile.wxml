@@ -46,6 +46,22 @@
     </view>
   </view>
 
+  <!-- 恋爱成就 -->
+  <c-card title="恋爱成就">
+    <view class="ach-summary flex-between" bindtap="goAchievement">
+      <view class="ach-summary-info">
+        <view class="ach-summary-num">{{unlockedCount}} 个成就已解锁</view>
+        <view class="ach-badges flex-row">
+          <text class="ach-badge-item" wx:if="{{badgeStats.bronze > 0}}">🥉{{badgeStats.bronze}}</text>
+          <text class="ach-badge-item" wx:if="{{badgeStats.silver > 0}}">🥈{{badgeStats.silver}}</text>
+          <text class="ach-badge-item" wx:if="{{badgeStats.gold > 0}}">🥇{{badgeStats.gold}}</text>
+          <text class="ach-badge-item" wx:if="{{badgeStats.platinum > 0}}">💎{{badgeStats.platinum}}</text>
+        </view>
+        <view class="ach-summary-hint">查看全部成就 ›</view>
+      </view>
+      <view class="ach-summary-icon">🏆</view>
+    </view>
+  </c-card>
 
   <!-- ===== 使用者模式：爱心币余额 + 充值 ===== -->
   <view wx:if="{{!isDev}}">

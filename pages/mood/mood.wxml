@@ -1,0 +1,88 @@
+<view class="page">
+  <!-- 今日心情 -->
+  <c-card title="今日心情">
+    <block wx:if="{{todayMood}}">
+      <view class="today-done flex-center">
+        <view class="today-emoji">
+          <text wx:if="{{todayMood.mood === 'happy'}}">😊</text>
+          <text wx:elif="{{todayMood.mood === 'sweet'}}">🥰</text>
+          <text wx:elif="{{todayMood.mood === 'calm'}}">😌</text>
+          <text wx:elif="{{todayMood.mood === 'sad'}}">😢</text>
+          <text wx:elif="{{todayMood.mood === 'angry'}}">😤</text>
+        </view>
+        <view class="today-label">今日已打卡</view>
+        <view class="today-note" wx:if="{{todayMood.note}}">{{todayMood.note}}</view>
+      </view>
+    </block>
+    <block wx:else>
+      <view class="mood-picker flex-row">
+        <view
+          wx:for="{{moodOptions}}" wx:key="key"
+          class="mood-option {{selectedMood === item.key ? 'selected' : ''}}"
+          bindtap="selectMood" data-key="{{item.key}}"
+        >
+          <view class="mood-emoji">{{item.emoji}}</view>
+          <view class="mood-label">{{item.label}}</view>
+        </view>
+      </view>
+      <view class="note-wrap">
+        <textarea
+          class="note-input"
+          placeholder="写点什么吧（可选）"
+          value="{{noteText}}"
+          bindinput="onNoteInput"
+          maxlength="100"
+          auto-height
+        />
+        <text class="note-count">{{noteText.length || 0}}/100</text>
+      </view>
+      <view class="submit-btn" bindtap="submitMood">打卡 💕</view>
+    </block>
+  </c-card>
+
+  <!-- TA的心情 -->
+  <c-card title="TA的心情">
+    <block wx:if="{{partnerMood}}">
+      <view class="partner-mood flex-row">
+        <view class="pm-emoji">
+          <text wx:if="{{partnerMood.mood === 'happy'}}">😊</text>
+          <text wx:elif="{{partnerMood.mood === 'sweet'}}">🥰</text>
+          <text wx:elif="{{partnerMood.mood === 'calm'}}">😌</text>
+          <text wx:elif="{{partnerMood.mood === 'sad'}}">😢</text>
+          <text wx:elif="{{partnerMood.mood === 'angry'}}">😤</text>
+        </view>
+        <view class="pm-info">
+          <view class="pm-name">{{isDev ? girlName : boyName}}</view>
+          <view class="pm-note" wx:if="{{partnerMood.note}}">{{partnerMood.note}}</view>
+        </view>
+      </view>
+    </block>
+    <block wx:else>
+      <view class="partner-empty">TA还没有打卡哦～</view>
+    </block>
+  </c-card>
+
+  <!-- 最近7天 -->
+  <c-card title="最近7天">
+    <view class="history-grid flex-row">
+      <view class="history-day" wx:for="{{recentMoods}}" wx:key="date">
+        <view class="hd-date">{{item.displayDate}}</view>
+        <view class="hd-moods">
+          <block wx:for="{{item.moods}}" wx:for-item="m" wx:key="id">
+            <view class="hd-mood-item">
+              <text class="hd-role">{{m.role === 'dev' ? boyName : girlName}}</text>
+              <text class="hd-emoji" wx:if="{{m.mood === 'happy'}}">😊</text>
+              <text class="hd-emoji" wx:elif="{{m.mood === 'sweet'}}">🥰</text>
+              <text class="hd-emoji" wx:elif="{{m.mood === 'calm'}}">😌</text>
+              <text class="hd-emoji" wx:elif="{{m.mood === 'sad'}}">😢</text>
+              <text class="hd-emoji" wx:elif="{{m.mood === 'angry'}}">😤</text>
+            </view>
+          </block>
+          <view class="hd-empty" wx:if="{{item.moods.length === 0}}">-</view>
+        </view>
+      </view>
+    </view>
+  </c-card>
+
+  <view style="height: 40rpx;"></view>
+</view>

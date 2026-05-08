@@ -9,7 +9,9 @@
     "pages/whisper/whisper",
     "pages/album/album",
     "pages/anniversary/anniversary",
-    "pages/wishlist/wishlist"
+    "pages/wishlist/wishlist",
+    "pages/mood/mood",
+    "pages/achievement/achievement"
   ],
   "window": {
     "backgroundTextStyle": "light",

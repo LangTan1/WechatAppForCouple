@@ -1,0 +1,96 @@
+.page { padding-top: 20rpx; }
+
+/* 心情选择网格 */
+.mood-picker {
+  justify-content: space-around;
+  padding: 20rpx 0;
+}
+
+.mood-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20rpx 16rpx;
+  border-radius: 20rpx;
+  background: #FFF5F5;
+  min-width: 100rpx;
+  transition: all 0.2s;
+}
+
+.mood-option.selected {
+  background: linear-gradient(135deg, #FF6B8A, #FF85A2);
+  box-shadow: 0 4rpx 16rpx rgba(255, 107, 138, 0.3);
+}
+
+.mood-option.selected .mood-label {
+  color: #FFFFFF;
+}
+
+.mood-emoji { font-size: 52rpx; margin-bottom: 8rpx; }
+.mood-label { font-size: 24rpx; color: #666; }
+
+/* 已打卡状态 */
+.today-done { flex-direction: column; padding: 30rpx 0; }
+.today-emoji { font-size: 80rpx; margin-bottom: 16rpx; }
+.today-label { font-size: 28rpx; color: #FF6B8A; font-weight: 600; }
+.today-note { font-size: 26rpx; color: #999; margin-top: 12rpx; }
+
+/* 备注输入 */
+.note-wrap { margin-top: 20rpx; }
+.note-input {
+  background: #F8F8F8; border-radius: 16rpx; padding: 20rpx;
+  font-size: 28rpx; width: 100%; box-sizing: border-box; min-height: 80rpx;
+}
+.note-count {
+  text-align: right; font-size: 24rpx; color: #CCC;
+  display: block; margin-top: 8rpx;
+}
+
+/* 提交按钮 */
+.submit-btn {
+  background: linear-gradient(135deg, #FF6B8A, #FF85A2);
+  color: #FFFFFF; border-radius: 40rpx; padding: 22rpx;
+  text-align: center; font-size: 30rpx; font-weight: 500;
+  margin-top: 24rpx;
+}
+.submit-btn:active { opacity: 0.85; }
+
+/* 对方心情 */
+.partner-mood { padding: 16rpx 0; align-items: center; }
+.pm-emoji { font-size: 60rpx; margin-right: 20rpx; }
+.pm-name { font-size: 28rpx; font-weight: 600; color: #333; }
+.pm-note { font-size: 26rpx; color: #999; margin-top: 6rpx; }
+.partner-empty { text-align: center; color: #CCC; font-size: 28rpx; padding: 30rpx 0; }
+
+/* 7天历史 */
+.history-grid {
+  justify-content: space-between;
+}
+
+.history-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.hd-date {
+  font-size: 20rpx; color: #BBB; margin-bottom: 10rpx;
+}
+
+.hd-moods {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.hd-mood-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 6rpx;
+}
+
+.hd-role { font-size: 18rpx; color: #CCC; }
+.hd-emoji { font-size: 32rpx; }
+.hd-empty { font-size: 28rpx; color: #EEE; }

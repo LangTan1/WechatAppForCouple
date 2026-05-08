@@ -184,6 +184,38 @@
   letter-spacing: 1rpx;
 }
 
+/* 今日心情状态卡 */
+.mood-status-card {
+  margin: 0 24rpx 16rpx;
+  background: linear-gradient(135deg, #FFF0FF, #F8F0FF);
+  border-radius: 20rpx;
+  padding: 24rpx;
+  box-shadow: 0 2rpx 12rpx rgba(180, 100, 255, 0.08);
+}
+
+.mood-status-row {
+  justify-content: center;
+  align-items: center;
+}
+
+.ms-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.ms-emoji { font-size: 48rpx; margin-bottom: 6rpx; display: block; }
+.ms-name { font-size: 24rpx; color: #999; }
+
+.ms-divider { font-size: 28rpx; opacity: 0.6; margin: 0 40rpx; }
+
+.ms-hint {
+  text-align: center;
+  font-size: 24rpx;
+  color: #BB88DD;
+  margin-top: 12rpx;
+}
+
 /* 今日菜单区 */
 .today-menu {
   justify-content: space-around;

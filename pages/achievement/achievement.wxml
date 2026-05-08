@@ -1,0 +1,56 @@
+<view class="page">
+  <!-- 成就进度 -->
+  <c-card title="成就进度">
+    <view class="ach-progress-bar">
+      <view class="ach-progress-fill" style="width: {{progressPercent}}%;"></view>
+    </view>
+    <view class="ach-progress-text">{{unlockedCount}} / {{totalCount}} 已解锁</view>
+    <view class="tier-stats flex-row">
+      <view class="tier-stat">
+        <text class="tier-stat-icon">🥉</text>
+        <text class="tier-stat-num">{{tierStats.bronze.unlocked}}/{{tierStats.bronze.total}}</text>
+      </view>
+      <view class="tier-stat">
+        <text class="tier-stat-icon">🥈</text>
+        <text class="tier-stat-num">{{tierStats.silver.unlocked}}/{{tierStats.silver.total}}</text>
+      </view>
+      <view class="tier-stat">
+        <text class="tier-stat-icon">🥇</text>
+        <text class="tier-stat-num">{{tierStats.gold.unlocked}}/{{tierStats.gold.total}}</text>
+      </view>
+      <view class="tier-stat">
+        <text class="tier-stat-icon">💎</text>
+        <text class="tier-stat-num">{{tierStats.platinum.unlocked}}/{{tierStats.platinum.total}}</text>
+      </view>
+    </view>
+  </c-card>
+
+  <!-- 筛选标签 -->
+  <view class="filter-tabs flex-row">
+    <view class="filter-tab {{activeFilter === 'all' ? 'active' : ''}}" bindtap="filterByTier" data-tier="all">全部</view>
+    <view class="filter-tab {{activeFilter === 'bronze' ? 'active' : ''}}" bindtap="filterByTier" data-tier="bronze">🥉 铜牌</view>
+    <view class="filter-tab {{activeFilter === 'silver' ? 'active' : ''}}" bindtap="filterByTier" data-tier="silver">🥈 银牌</view>
+    <view class="filter-tab {{activeFilter === 'gold' ? 'active' : ''}}" bindtap="filterByTier" data-tier="gold">🥇 金牌</view>
+    <view class="filter-tab {{activeFilter === 'platinum' ? 'active' : ''}}" bindtap="filterByTier" data-tier="platinum">💎 铂金</view>
+  </view>
+
+  <!-- 全部成就 -->
+  <c-card title="全部成就">
+    <view class="ach-grid">
+      <block wx:for="{{achievements}}" wx:key="id">
+        <view
+          wx:if="{{activeFilter === 'all' || activeFilter === item.tier}}"
+          class="ach-item {{item.unlocked ? 'unlocked' : 'locked'}} tier-{{item.tier}}"
+        >
+          <view class="ach-tier-badge" wx:if="{{item.unlocked}}">{{item.tierIcon}}</view>
+          <view class="ach-emoji">{{item.emoji}}</view>
+          <view class="ach-title">{{item.title}}</view>
+          <view class="ach-desc">{{item.desc}}</view>
+          <view class="ach-tier-label">{{item.tierLabel}}</view>
+        </view>
+      </block>
+    </view>
+  </c-card>
+
+  <view style="height: 40rpx;"></view>
+</view>

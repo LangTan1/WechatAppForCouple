@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "恋爱成就",
+  "usingComponents": {
+    "c-card": "/components/card/card"
+  }
+}

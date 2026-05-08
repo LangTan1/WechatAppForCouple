@@ -8,6 +8,9 @@ Page({
   goAlbum() {
     wx.navigateTo({ url: '/pages/album/album' });
   },
+  goMood() {
+    wx.navigateTo({ url: '/pages/mood/mood' });
+  },
   goAnniversary() {
     wx.navigateTo({ url: '/pages/anniversary/anniversary' });
   },

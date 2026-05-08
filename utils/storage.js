@@ -26,7 +26,10 @@ const STORAGE_KEYS = {
   CURRENT_ROLE: 'current_role',
   ORDER_QUEUE: 'order_queue',
   FOOD_REQUESTS: 'food_requests',
-  COIN_REQUESTS: 'coin_requests'
+  COIN_REQUESTS: 'coin_requests',
+  MOODS: 'custom_moods',
+  ACHIEVEMENTS: 'custom_achievements',
+  ORDER_TOTAL_COUNT: 'order_total_count'
 };
 
 function get(key, defaultValue) {
@@ -114,6 +117,15 @@ function addOrder(item) {
     status: 'pending'
   });
   setOrderQueue(queue);
+  incrementOrderTotalCount();
+}
+
+// ---- 累计订单计数（不被自动清理影响） ----
+function getOrderTotalCount() { return get(STORAGE_KEYS.ORDER_TOTAL_COUNT, 0); }
+function incrementOrderTotalCount() {
+  const count = getOrderTotalCount() + 1;
+  set(STORAGE_KEYS.ORDER_TOTAL_COUNT, count);
+  return count;
 }
 
 // ---- 食物请求（使用者请求新食物，开发者定价） ----
@@ -227,6 +239,87 @@ function setLockEnabled(val) { set(STORAGE_KEYS.LOCK_ENABLED, val); }
 function getWeatherCache() { return get(STORAGE_KEYS.WEATHER_CACHE, null); }
 function setWeatherCache(data) { set(STORAGE_KEYS.WEATHER_CACHE, data); }
 
+// ---- 日期辅助 ----
+function _formatDate(dt) {
+  return dt.getFullYear() + '-' +
+    String(dt.getMonth() + 1).padStart(2, '0') + '-' +
+    String(dt.getDate()).padStart(2, '0');
+}
+function _todayStr() { return _formatDate(new Date()); }
+
+// ---- 每日心情 ----
+function getMoods() { return get(STORAGE_KEYS.MOODS, []); }
+function setMoods(list) { set(STORAGE_KEYS.MOODS, list); }
+
+function getTodayMood() {
+  const moods = getMoods();
+  const today = _todayStr();
+  const role = getCurrentRole();
+  for (let i = 0; i < moods.length; i++) {
+    if (moods[i].date === today && moods[i].role === role) return moods[i];
+  }
+  return null;
+}
+
+function getPartnerTodayMood() {
+  const moods = getMoods();
+  const today = _todayStr();
+  const role = getCurrentRole();
+  const partnerRole = role === 'dev' ? 'user' : 'dev';
+  for (let i = 0; i < moods.length; i++) {
+    if (moods[i].date === today && moods[i].role === partnerRole) return moods[i];
+  }
+  return null;
+}
+
+function getRecentMoods(days) {
+  const moods = getMoods();
+  const result = [];
+  const now = new Date();
+  for (let d = 0; d < days; d++) {
+    const dt = new Date(now.getTime() - d * 86400000);
+    const dateStr = _formatDate(dt);
+    const dayMoods = [];
+    for (let i = 0; i < moods.length; i++) {
+      if (moods[i].date === dateStr) dayMoods.push(moods[i]);
+    }
+    result.push({ date: dateStr, moods: dayMoods });
+  }
+  return result;
+}
+
+// ---- 恋爱成就 ----
+function getAchievements() { return get(STORAGE_KEYS.ACHIEVEMENTS, []); }
+function setAchievements(list) { set(STORAGE_KEYS.ACHIEVEMENTS, list); }
+
+function getUnlockedAchievementCount() {
+  const achievements = getAchievements();
+  let count = 0;
+  for (let i = 0; i < achievements.length; i++) {
+    if (achievements[i].unlocked) count++;
+  }
+  return count;
+}
+
+function unlockAchievement(id) {
+  const achievements = getAchievements();
+  let found = false;
+  for (let i = 0; i < achievements.length; i++) {
+    if (achievements[i].id === id) {
+      if (achievements[i].unlocked) return false;
+      achievements[i].unlocked = true;
+      achievements[i].unlockedAt = Date.now();
+      found = true;
+      break;
+    }
+  }
+  if (!found) {
+    achievements.push({ id: id, unlocked: true, unlockedAt: Date.now() });
+  }
+  setAchievements(achievements);
+  return true;
+}
+
 module.exports = {
   STORAGE_KEYS,
   get, set,
@@ -251,5 +344,9 @@ module.exports = {
   getDevKey, setDevKey, verifyDevKey,
   getUserKey, setUserKey, verifyUserKey,
   isLockEnabled, setLockEnabled,
-  getWeatherCache, setWeatherCache
+  getWeatherCache, setWeatherCache,
+  _formatDate, _todayStr,
+  getMoods, setMoods, getTodayMood, getPartnerTodayMood, getRecentMoods,
+  getAchievements, setAchievements, getUnlockedAchievementCount, unlockAchievement,
+  getOrderTotalCount, incrementOrderTotalCount
 };

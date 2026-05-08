@@ -13,7 +13,9 @@ Page({
     nextAnniversary: '',
     upcomingAnniversaries: [],
     wishCount: 0,
-    activities: []
+    activities: [],
+    todayMood: null,
+    partnerMood: null
   },
 
   onLoad() {
@@ -102,7 +104,9 @@ Page({
       upcomingAnniversaries: upcoming,
       nextAnniversary: nextAnn.title,
       wishCount: undoneWishes,
-      activities: activities.slice(0, 6)
+      activities: activities.slice(0, 6),
+      todayMood: storage.getTodayMood(),
+      partnerMood: storage.getPartnerTodayMood()
     });
   },
 
@@ -137,5 +141,8 @@ Page({
   },
   goRecord() {
     wx.switchTab({ url: '/pages/record/record' });
+  },
+  goMood() {
+    wx.navigateTo({ url: '/pages/mood/mood' });
   }
 });

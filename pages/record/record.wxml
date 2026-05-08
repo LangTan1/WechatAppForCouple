@@ -33,6 +33,17 @@
       </view>
       <text class="re-arrow">›</text>
     </view>
+
+    <view class="record-entry flex-between" bindtap="goMood">
+      <view class="re-left flex-row">
+        <view class="re-icon mood-bg">🌈</view>
+        <view>
+          <view class="re-title">每日心情</view>
+          <view class="re-sub">今天你的心情如何</view>
+        </view>
+      </view>
+      <text class="re-arrow">›</text>
+    </view>
   </view>
 
   <!-- 快捷入口 -->

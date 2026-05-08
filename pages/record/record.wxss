@@ -32,6 +32,7 @@
 .diary-bg    { background: #FFF0F3; }
 .whisper-bg  { background: #FFF5F0; }
 .album-bg    { background: #F0F5FF; }
+.mood-bg     { background: #FFF0FF; }
 
 .re-title {
   font-size: 30rpx;

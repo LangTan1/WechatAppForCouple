@@ -14,6 +14,8 @@ Page({
     photoCount: 0,
     anniversaryCount: 0,
     coinBalance: 0,
+    unlockedCount: 0,
+    badgeStats: { bronze: 0, silver: 0, gold: 0, platinum: 0 },
     lockEnabled: false,
     userKeyMasked: '****',
     // 弹窗
@@ -66,6 +68,8 @@ Page({
       photoCount: storage.getAlbumPhotos().length,
       anniversaryCount: storage.getAnniversaries().length,
       coinBalance: coins,
+      unlockedCount: storage.getUnlockedAchievementCount(),
+      badgeStats: this.calcBadgeStats(),
       lockEnabled: storage.isLockEnabled(),
       userKeyMasked: userKey ? userKey.slice(0, 2) + '****' : '未设置'
     });
@@ -247,6 +251,29 @@ Page({
   goDiary() { wx.navigateTo({ url: '/pages/diary/diary' }); },
   goAlbum() { wx.navigateTo({ url: '/pages/album/album' }); },
   goAnniversary() { wx.navigateTo({ url: '/pages/anniversary/anniversary' }); },
+  goAchievement() { wx.navigateTo({ url: '/pages/achievement/achievement' }); },
+
+  calcBadgeStats() {
+    const achievements = storage.getAchievements();
+    // 成就等级定义（与 achievement.js 保持一致）
+    const tierMap = {
+      first_diary: 'bronze', first_whisper: 'bronze', first_photo: 'bronze',
+      first_wish: 'bronze', first_order: 'bronze', wish_done: 'bronze', order_done_1: 'bronze',
+      diary_10: 'silver', whisper_10: 'silver', photo_20: 'silver', wish_5: 'silver',
+      wish_10: 'silver', wish_done_5: 'silver', anniversary_3: 'silver', anniversary_5: 'silver',
+      order_10: 'silver', together_100: 'silver', mood_sync: 'silver',
+      diary_50: 'gold', whisper_50: 'gold', photo_50: 'gold', order_100: 'gold',
+      mood_streak_7: 'gold', together_365: 'gold',
+      all_features: 'platinum'
+    };
+    const stats = { bronze: 0, silver: 0, gold: 0, platinum: 0 };
+    for (let i = 0; i < achievements.length; i++) {
+      if (achievements[i].unlocked && tierMap[achievements[i].id]) {
+        stats[tierMap[achievements[i].id]]++;
+      }
+    }
+    return stats;
+  },
 
   noop() {}
 });

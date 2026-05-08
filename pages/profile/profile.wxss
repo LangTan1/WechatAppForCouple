@@ -53,6 +53,15 @@
 .stat-num { font-size: 40rpx; font-weight: 700; color: #FF6B8A; }
 .stat-label { font-size: 24rpx; color: #999; margin-top: 6rpx; }
 
+/* 恋爱成就摘要 */
+.ach-summary { padding: 8rpx 0; align-items: center; }
+.ach-summary-info { flex: 1; }
+.ach-summary-num { font-size: 30rpx; font-weight: 600; color: #333; }
+.ach-summary-hint { font-size: 24rpx; color: #FF6B8A; margin-top: 6rpx; }
+.ach-summary-icon { font-size: 56rpx; }
+.ach-badges { gap: 12rpx; margin-top: 8rpx; }
+.ach-badge-item { font-size: 24rpx; color: #666; }
+
 /* 使用者：爱心币 + 充值 */
 .coin-display { padding: 20rpx 0; }
 .coin-big { font-size: 72rpx; font-weight: 700; color: #FF6B8A; }

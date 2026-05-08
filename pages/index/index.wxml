@@ -63,6 +63,39 @@
     <text class="quote-mark right">"</text>
   </view>
 
+  <!-- 今日心情 -->
+  <view class="mood-status-card" bindtap="goMood">
+    <view class="mood-status-row flex-row">
+      <view class="ms-item">
+        <text class="ms-emoji" wx:if="{{todayMood}}">
+          <block wx:if="{{todayMood.mood === 'happy'}}">😊</block>
+          <block wx:elif="{{todayMood.mood === 'sweet'}}">🥰</block>
+          <block wx:elif="{{todayMood.mood === 'calm'}}">😌</block>
+          <block wx:elif="{{todayMood.mood === 'sad'}}">😢</block>
+          <block wx:elif="{{todayMood.mood === 'angry'}}">😤</block>
+        </text>
+        <text class="ms-emoji" wx:else>😶</text>
+        <text class="ms-name">我</text>
+      </view>
+      <view class="ms-divider">💕</view>
+      <view class="ms-item">
+        <text class="ms-emoji" wx:if="{{partnerMood}}">
+          <block wx:if="{{partnerMood.mood === 'happy'}}">😊</block>
+          <block wx:elif="{{partnerMood.mood === 'sweet'}}">🥰</block>
+          <block wx:elif="{{partnerMood.mood === 'calm'}}">😌</block>
+          <block wx:elif="{{partnerMood.mood === 'sad'}}">😢</block>
+          <block wx:elif="{{partnerMood.mood === 'angry'}}">😤</block>
+        </text>
+        <text class="ms-emoji" wx:else>😶</text>
+        <text class="ms-name">TA</text>
+      </view>
+    </view>
+    <view class="ms-hint">
+      <text wx:if="{{todayMood}}">今日已打卡 ›</text>
+      <text wx:else>记录今日心情 ›</text>
+    </view>
+  </view>
+
   <!-- 今日菜单区 -->
   <c-card title="今天想…" shadow="{{false}}" customStyle="background: linear-gradient(135deg, #FFF5F7, #FFEEF2);">
     <view class="today-menu flex-row">
