@@ -54,7 +54,12 @@ Page({
   },
 
   onLoad() { this.checkAndLoad(); },
-  onShow() { this.checkAndLoad(); },
+  onShow() { this.checkAndLoad(); this.syncFromCloud(); },
+
+  async syncFromCloud() {
+    await storage.loadFromCloud();
+    this.checkAndLoad();
+  },
 
   checkAndLoad() {
     this.checkAchievements();

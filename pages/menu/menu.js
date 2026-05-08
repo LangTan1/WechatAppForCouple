@@ -51,7 +51,12 @@ Page({
   },
 
   onLoad() { this.init(); },
-  onShow() { this.init(); },
+  onShow() { this.init(); this.syncFromCloud(); },
+
+  async syncFromCloud() {
+    await storage.loadFromCloud();
+    this.init();
+  },
 
   init() {
     const isDev = storage.isDeveloper();

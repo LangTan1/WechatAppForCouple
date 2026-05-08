@@ -1,6 +1,42 @@
 /**
- * 本地存储管理
+ * 本地存储管理 + 云同步
  */
+let _db = null;
+let _couples = null;
+let _coupleDocId = null;  // 当前设备绑定的情侣文档ID
+let _syncingFromCloud = false;  // 防止云端→本地→云端回环
+
+function _getCloudDB() {
+  if (!_db) {
+    _db = wx.cloud.database();
+    _couples = _db.collection('couples');
+  }
+  return { db: _db, couples: _couples };
+}
+
+// 云同步字段映射：storage key → cloud field
+const CLOUD_FIELDS = {
+  'together_date': 'togetherDate',
+  'boy_name': 'boyName',
+  'girl_name': 'girlName',
+  'boy_avatar': 'boyAvatar',
+  'girl_avatar': 'girlAvatar',
+  'boy_coins': 'boyCoins',
+  'girl_coins': 'girlCoins',
+  'custom_menu_items': 'menuItems',
+  'custom_anniversaries': 'anniversaries',
+  'custom_diaries': 'diaries',
+  'custom_whispers': 'whispers',
+  'custom_wishes': 'wishes',
+  'custom_album': 'albums',
+  'custom_moods': 'moods',
+  'custom_achievements': 'achievements',
+  'order_queue': 'orderQueue',
+  'food_requests': 'foodRequests',
+  'coin_requests': 'coinRequests',
+  'order_total_count': 'orderTotalCount'
+};
+
 const STORAGE_KEYS = {
   SETUP_DONE: 'setup_done',
   DEV_KEY: 'dev_key',
@@ -44,6 +80,10 @@ function get(key, defaultValue) {
 function set(key, value) {
   try {
     wx.setStorageSync(key, value);
+    // 自动同步到云端（排除从云端同步下来的场景，避免回环）
+    if (!_syncingFromCloud && CLOUD_FIELDS[key]) {
+      saveToCloud(key, value).catch(function(e) { console.error('Auto sync error:', e); });
+    }
   } catch (e) {
     console.error('Storage set error:', e);
   }
@@ -320,9 +360,180 @@ function unlockAchievement(id) {
   return true;
 }
 
+// ============================================================
+// 云同步功能
+// ============================================================
+
+// 获取当前绑定的情侣文档ID（从本地缓存读取）
+function getCoupleDocId() {
+  if (!_coupleDocId) {
+    _coupleDocId = get('couple_doc_id', '');
+  }
+  return _coupleDocId;
+}
+
+// 生成6位随机邀请码
+function generateInviteCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
+// 创建情侣文档（创建者调用）- 用本地数据初始化云端文档
+async function createCouple(openid, info) {
+  const { couples } = _getCloudDB();
+  const inviteCode = generateInviteCode();
+
+  const docData = {
+    inviteCode: inviteCode,
+    devOpenid: openid,
+    userOpenid: '',
+    boyName: info.boyName || '浪',
+    girlName: info.girlName || '琳琳',
+    togetherDate: info.togetherDate || '2025-05-31',
+    boyAvatar: getBoyAvatar(),
+    girlAvatar: getGirlAvatar(),
+    boyCoins: getBoyCoins(),
+    girlCoins: getGirlCoins(),
+    menuItems: getMenuItems(),
+    diaries: getDiaries(),
+    whispers: getWhispers(),
+    wishes: getWishes(),
+    anniversaries: getAnniversaries(),
+    albums: getAlbums(),
+    moods: getMoods(),
+    achievements: getAchievements(),
+    orderQueue: getOrderQueue(),
+    foodRequests: getFoodRequests(),
+    coinRequests: getCoinRequests(),
+    orderTotalCount: getOrderTotalCount(),
+    createdAt: _db.serverDate(),
+    updatedAt: _db.serverDate()
+  };
+
+  const res = await couples.add({ data: docData });
+  _coupleDocId = res._id;
+  set('couple_doc_id', _coupleDocId);
+  return { docId: res._id, inviteCode: inviteCode };
+}
+
+// 绑定对方（加入者调用）
+async function bindCouple(inviteCode, openid) {
+  const { couples } = _getCloudDB();
+
+  const res = await couples.where({ inviteCode: inviteCode }).get();
+  if (res.data.length === 0) {
+    return { success: false, error: '邀请码不存在' };
+  }
+
+  const couple = res.data[0];
+  if (couple.userOpenid && couple.userOpenid !== openid) {
+    return { success: false, error: '该邀请码已被其他人绑定' };
+  }
+
+  await couples.doc(couple._id).update({
+    data: { userOpenid: openid, updatedAt: _db.serverDate() }
+  });
+
+  _coupleDocId = couple._id;
+  set('couple_doc_id', _coupleDocId);
+
+  // 同步云端数据到本地
+  _syncCloudToLocal(couple);
+
+  return { success: true };
+}
+
+// 从云端加载数据到本地缓存
+async function loadFromCloud() {
+  const docId = getCoupleDocId();
+  if (!docId) return false;
+
+  try {
+    const { couples } = _getCloudDB();
+    const res = await couples.doc(docId).get();
+    const data = res.data;
+    _syncCloudToLocal(data);
+    return true;
+  } catch (e) {
+    console.error('loadFromCloud error:', e);
+    return false;
+  }
+}
+
+// 将云端数据写入本地缓存（_syncingFromCloud 防止回环）
+function _syncCloudToLocal(data) {
+  _syncingFromCloud = true;
+  if (data.togetherDate) set(STORAGE_KEYS.TOGETHER_DATE, data.togetherDate);
+  if (data.boyName) set(STORAGE_KEYS.BOY_NAME, data.boyName);
+  if (data.girlName) set(STORAGE_KEYS.GIRL_NAME, data.girlName);
+  if (data.boyAvatar !== undefined) set(STORAGE_KEYS.BOY_AVATAR, data.boyAvatar);
+  if (data.girlAvatar !== undefined) set(STORAGE_KEYS.GIRL_AVATAR, data.girlAvatar);
+  if (data.boyCoins !== undefined) set(STORAGE_KEYS.BOY_COINS, data.boyCoins);
+  if (data.girlCoins !== undefined) set(STORAGE_KEYS.GIRL_COINS, data.girlCoins);
+  if (data.menuItems) set(STORAGE_KEYS.MENU_ITEMS, data.menuItems);
+  if (data.diaries) set(STORAGE_KEYS.DIARIES, data.diaries);
+  if (data.whispers) set(STORAGE_KEYS.WHISPERS, data.whispers);
+  if (data.wishes) set(STORAGE_KEYS.WISHES, data.wishes);
+  if (data.anniversaries) set(STORAGE_KEYS.ANNIVERSARIES, data.anniversaries);
+  if (data.albums) set(STORAGE_KEYS.ALBUM, data.albums);
+  if (data.moods) set(STORAGE_KEYS.MOODS, data.moods);
+  if (data.achievements) set(STORAGE_KEYS.ACHIEVEMENTS, data.achievements);
+  if (data.orderQueue) set(STORAGE_KEYS.ORDER_QUEUE, data.orderQueue);
+  if (data.foodRequests) set(STORAGE_KEYS.FOOD_REQUESTS, data.foodRequests);
+  if (data.coinRequests) set(STORAGE_KEYS.COIN_REQUESTS, data.coinRequests);
+  if (data.orderTotalCount !== undefined) set(STORAGE_KEYS.ORDER_TOTAL_COUNT, data.orderTotalCount);
+  _syncingFromCloud = false;
+}
+
+// 保存单个字段到云端
+async function saveToCloud(storageKey, value) {
+  const docId = getCoupleDocId();
+  if (!docId) return;
+
+  const cloudField = CLOUD_FIELDS[storageKey];
+  if (!cloudField) return;
+
+  try {
+    const { couples } = _getCloudDB();
+    const updateData = {};
+    updateData[cloudField] = value;
+    updateData.updatedAt = _db.serverDate();
+    await couples.doc(docId).update({ data: updateData });
+  } catch (e) {
+    console.error('saveToCloud error:', e);
+  }
+}
+
+// 批量保存到云端
+async function saveBatchToCloud(updates) {
+  const docId = getCoupleDocId();
+  if (!docId) return;
+
+  const cloudUpdates = { updatedAt: _db.serverDate() };
+  for (const key in updates) {
+    const cloudField = CLOUD_FIELDS[key];
+    if (cloudField) cloudUpdates[cloudField] = updates[key];
+  }
+
+  try {
+    const { couples } = _getCloudDB();
+    await couples.doc(docId).update({ data: cloudUpdates });
+  } catch (e) {
+    console.error('saveBatchToCloud error:', e);
+  }
+}
+
+// ============================================================
+// 导出
+// ============================================================
 module.exports = {
   STORAGE_KEYS,
   get, set,
+  getCurrentRole, setCurrentRole, isDeveloper, isUser,
   getCurrentRole, setCurrentRole, isDeveloper, isUser,
   getTogetherDate, setTogetherDate, getTogetherDays,
   getBoyName, setBoyName, getGirlName, setGirlName,
@@ -348,5 +559,7 @@ module.exports = {
   _formatDate, _todayStr,
   getMoods, setMoods, getTodayMood, getPartnerTodayMood, getRecentMoods,
   getAchievements, setAchievements, getUnlockedAchievementCount, unlockAchievement,
-  getOrderTotalCount, incrementOrderTotalCount
+  getOrderTotalCount, incrementOrderTotalCount,
+  getCoupleDocId, generateInviteCode, createCouple, bindCouple,
+  loadFromCloud, saveToCloud, saveBatchToCloud
 };

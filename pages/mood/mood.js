@@ -25,7 +25,15 @@ Page({
   },
 
   onLoad() { this.loadData(); },
-  onShow() { this.loadData(); },
+  onShow() {
+    this.loadData();
+    this.syncFromCloud();
+  },
+
+  async syncFromCloud() {
+    await storage.loadFromCloud();
+    this.loadData();
+  },
 
   loadData() {
     const isDev = storage.isDeveloper();

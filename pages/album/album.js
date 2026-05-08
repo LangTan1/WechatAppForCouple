@@ -15,7 +15,7 @@ Page({
   },
 
   onLoad() { this.loadAlbums(); },
-  onShow() { this.loadAlbums(); },
+  onShow() { this.loadAlbums(); this.syncFromCloud(); },
 
   loadAlbums() {
     const albums = storage.getAlbums();
@@ -154,5 +154,10 @@ Page({
     this.setData({ previewPhoto: null });
   },
 
-  noop() {}
+  noop() {},
+
+  async syncFromCloud() {
+    await storage.loadFromCloud();
+    this.loadAlbums();
+  }
 });

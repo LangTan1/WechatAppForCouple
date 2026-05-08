@@ -14,6 +14,7 @@ Page({
 
   onShow() {
     this.loadDiaries();
+    this.syncFromCloud();
   },
 
   loadDiaries() {
@@ -60,5 +61,10 @@ Page({
     wx.showToast({ title: '日记已记录 💕', icon: 'none' });
   },
 
-  noop() {}
+  noop() {},
+
+  async syncFromCloud() {
+    await storage.loadFromCloud();
+    this.loadDiaries();
+  }
 });

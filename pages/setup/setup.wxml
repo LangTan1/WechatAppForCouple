@@ -20,6 +20,7 @@
       />
       <view class="key-hint" wx:if="{{keyError}}">{{keyError}}</view>
       <view class="btn-primary" bindtap="verifyDevKey">验证</view>
+      <view class="btn-secondary" bindtap="showBindInput">我有邀请码（对方设备）</view>
     </view>
   </view>
 
@@ -74,6 +75,72 @@
       </view>
 
       <view class="btn-primary" bindtap="finishSetup">完成设置 💕</view>
+    </view>
+  </view>
+
+  <!-- 等待对方绑定（创建者看到） -->
+  <view wx:if="{{step === 'bind_wait'}}">
+    <view class="welcome-area">
+      <text class="welcome-emoji">💌</text>
+      <text class="welcome-title">{{boyName}} & {{girlName}}</text>
+      <text class="welcome-sub">{{bindCreating ? '正在创建情侣空间...' : (bindCreateError ? '创建失败' : '情侣空间已创建')}}</text>
+    </view>
+
+    <view class="setup-form bind-form">
+      <!-- 创建中 -->
+      <view wx:if="{{bindCreating}}" style="text-align:center;padding:40rpx 0;">
+        <view style="font-size:48rpx;margin-bottom:20rpx;">⏳</view>
+        <view style="color:#999;font-size:26rpx;">正在连接云端，请稍候...</view>
+      </view>
+
+      <!-- 创建失败 -->
+      <view wx:elif="{{bindCreateError}}" style="text-align:center;padding:40rpx 0;">
+        <view style="font-size:48rpx;margin-bottom:20rpx;">😢</view>
+        <view class="key-hint">{{bindCreateError}}</view>
+        <view class="btn-primary" bindtap="retryCreateCouple">重试</view>
+        <view class="btn-secondary" bindtap="resetToDevKey">重新输入密钥</view>
+      </view>
+
+      <!-- 创建成功，显示邀请码 -->
+      <view wx:else>
+        <view class="form-title">邀请码</view>
+        <view class="form-desc">把这个邀请码发给TA，输入后即可绑定</view>
+
+        <view class="invite-code-area">
+          <text class="invite-code">{{inviteCode}}</text>
+        </view>
+
+        <view class="bind-hint">对方打开小程序后选择「我有邀请码」输入即可</view>
+
+        <view class="btn-primary" bindtap="skipBind">跳过，直接进入</view>
+        <view class="btn-secondary" bindtap="showBindInput">我有邀请码（对方设备）</view>
+        <view class="btn-secondary" bindtap="resetToDevKey">重新设置</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 输入邀请码（加入者看到） -->
+  <view wx:if="{{step === 'bind_input'}}">
+    <view class="welcome-area">
+      <text class="welcome-emoji">💕</text>
+      <text class="welcome-title">加入情侣空间</text>
+      <text class="welcome-sub">输入对方给你的邀请码</text>
+    </view>
+
+    <view class="setup-form">
+      <view class="form-title">输入邀请码</view>
+      <input
+        class="key-input invite-input"
+        placeholder="请输入6位邀请码"
+        value="{{bindCode}}"
+        bindinput="onBindCodeInput"
+        maxlength="6"
+      />
+      <view class="key-hint" wx:if="{{bindError}}">{{bindError}}</view>
+      <view class="btn-primary {{bindLoading ? 'disabled' : ''}}" bindtap="confirmBind">
+        {{bindLoading ? '绑定中...' : '绑定 💕'}}
+      </view>
+      <view class="btn-secondary" bindtap="showBindWait">返回</view>
     </view>
   </view>
 

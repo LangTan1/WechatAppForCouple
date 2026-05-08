@@ -13,6 +13,7 @@ Page({
 
   onShow() {
     this.loadWhispers();
+    this.syncFromCloud();
   },
 
   loadWhispers() {
@@ -50,5 +51,10 @@ Page({
     this.setData({ inputText: '' });
     this.loadWhispers();
     wx.showToast({ title: '已发送 💌', icon: 'none', duration: 1500 });
+  },
+
+  async syncFromCloud() {
+    await storage.loadFromCloud();
+    this.loadWhispers();
   }
 });

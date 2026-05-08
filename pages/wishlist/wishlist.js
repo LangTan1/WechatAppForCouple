@@ -18,6 +18,12 @@ Page({
 
   onShow() {
     this.loadWishes();
+    this.syncFromCloud();
+  },
+
+  async syncFromCloud() {
+    await storage.loadFromCloud();
+    this.loadWishes();
   },
 
   loadWishes() {

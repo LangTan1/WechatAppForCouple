@@ -2,10 +2,43 @@ const storage = require('./utils/storage');
 
 App({
   onLaunch() {
+    // 初始化云开发环境
+    wx.cloud.init({
+      env: 'cloud1-d0gzs51l9cbf4b9bc',
+      traceUser: true
+    });
+
     const systemInfo = wx.getSystemInfoSync();
     this.globalData.systemInfo = systemInfo;
     this.globalData.statusBarHeight = systemInfo.statusBarHeight;
+
+    // 获取openid
+    this.initOpenid();
     this.initDefaultData();
+  },
+
+  async initOpenid() {
+    try {
+      // 方法1：尝试云函数
+      const res = await wx.cloud.callFunction({ name: 'getOpenid' });
+      this.globalData.openid = res.result.openid;
+      console.log('openid获取成功(云函数):', this.globalData.openid);
+    } catch (e) {
+      console.warn('云函数获取openid失败，尝试数据库方式:', e.message);
+      // 方法2：通过云数据库获取（写入再读取，利用 _openid 自动字段）
+      try {
+        const db = wx.cloud.database();
+        const tempCol = db.collection('couples');
+        const addRes = await tempCol.add({ data: { _temp: true } });
+        const docRes = await tempCol.doc(addRes._id).get();
+        this.globalData.openid = docRes.data._openid;
+        console.log('openid获取成功(数据库):', this.globalData.openid);
+        // 清理临时数据
+        await tempCol.doc(addRes._id).remove();
+      } catch (e2) {
+        console.error('数据库方式也失败:', e2);
+      }
+    }
   },
 
   initDefaultData() {
@@ -44,6 +77,7 @@ App({
 
   globalData: {
     systemInfo: null,
-    statusBarHeight: 0
+    statusBarHeight: 0,
+    openid: ''
   }
 });

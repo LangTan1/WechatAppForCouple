@@ -40,6 +40,12 @@ Page({
 
   onShow() {
     this.refreshData();
+    this.syncFromCloud();
+  },
+
+  async syncFromCloud() {
+    await storage.loadFromCloud();
+    this.refreshData();
   },
 
   initData() {

@@ -29,6 +29,13 @@ Page({
       togetherDays: storage.getTogetherDays()
     });
     this.refreshData();
+    this.syncFromCloud();
+  },
+
+  async syncFromCloud() {
+    await storage.loadFromCloud();
+    this.refreshData();
+    this.setData({ togetherDays: storage.getTogetherDays() });
   },
 
   initData() {
