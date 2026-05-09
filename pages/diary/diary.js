@@ -15,6 +15,7 @@ Page({
   onShow() {
     this.loadDiaries();
     this.syncFromCloud();
+    storage.updateLastView('diary');
   },
 
   loadDiaries() {
@@ -46,10 +47,12 @@ Page({
 
     const newDiary = {
       id: Date.now(),
+      role: storage.getCurrentRole(),
       date: dateStr,
       title: newTitle.trim(),
       content: newContent.trim(),
-      mood: 'happy'
+      mood: 'happy',
+      createdAt: Date.now()
     };
 
     const diaries = storage.getDiaries();

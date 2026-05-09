@@ -1,126 +1,109 @@
 .page {
-  padding-bottom: 140rpx;
-}
-
-/* 悄悄话列表 */
-.whisper-list {
-  margin: 20rpx 24rpx;
+  background: #F5F5F5;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  gap: 20rpx;
+  justify-content: flex-end;
 }
 
-.whisper-item {
+/* 消息列表 - 从底部开始 */
+.whisper-list {
+  padding: 20rpx 24rpx 0;
   display: flex;
-  max-width: 85%;
+  flex-direction: column;
+  gap: 12rpx;
 }
 
-.whisper-item.from-him {
-  align-self: flex-start;
+/* 时间分割线 */
+.time-divider {
+  text-align: center;
+  padding: 16rpx 0 8rpx;
+}
+.time-divider-text {
+  font-size: 20rpx; color: #BBB;
+  background: rgba(0,0,0,0.04);
+  padding: 4rpx 16rpx; border-radius: 8rpx;
 }
 
-.whisper-item.from-her {
+/* 消息行 */
+.msg-row {
+  display: flex;
+  flex-direction: column;
+  max-width: 65%;
+}
+.msg-row.mine {
   align-self: flex-end;
+  align-items: flex-end;
+}
+.msg-row.theirs {
+  align-self: flex-start;
+  align-items: flex-start;
 }
 
-.whisper-bubble {
-  padding: 20rpx 24rpx;
-  border-radius: 20rpx;
-  position: relative;
-}
-
-.from-him .whisper-bubble {
-  background: #FFFFFF;
-  border-top-left-radius: 4rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.06);
-}
-
-.from-her .whisper-bubble {
-  background: linear-gradient(135deg, #FFB6C1, #FFD1D9);
-  border-top-right-radius: 4rpx;
-}
-
-.whisper-sender {
-  font-size: 24rpx;
-  color: #FF6B8A;
-  margin-bottom: 8rpx;
-  font-weight: 500;
-}
-
-.whisper-content {
-  font-size: 28rpx;
-  color: #333;
-  line-height: 1.6;
+/* 气泡 */
+.msg-bubble {
+  padding: 16rpx 20rpx;
+  border-radius: 18rpx;
   word-break: break-all;
 }
+.mine .msg-bubble {
+  background: linear-gradient(135deg, #FF6B8A, #FF85A2);
+  border-top-right-radius: 4rpx;
+}
+.theirs .msg-bubble {
+  background: #FFFFFF;
+  border-top-left-radius: 4rpx;
+  box-shadow: 0 1rpx 6rpx rgba(0,0,0,0.05);
+}
 
-.whisper-time {
-  font-size: 22rpx;
-  color: #CCC;
-  margin-top: 8rpx;
-  text-align: right;
+.msg-content {
+  font-size: 28rpx;
+  line-height: 1.5;
+}
+.mine .msg-content { color: #FFF; }
+.theirs .msg-content { color: #333; }
+
+.msg-sender {
+  font-size: 20rpx;
+  color: #BBB;
+  margin-top: 4rpx;
+  padding: 0 4rpx;
 }
 
 /* 空状态 */
 .empty {
-  padding: 120rpx 0;
+  padding: 200rpx 0;
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
+.empty-emoji { font-size: 80rpx; margin-bottom: 20rpx; }
+.empty-text { font-size: 30rpx; color: #CCC; }
+.empty-sub { font-size: 26rpx; color: #DDD; margin-top: 8rpx; }
 
-.empty-emoji {
-  font-size: 80rpx;
-  margin-bottom: 20rpx;
-}
-
-.empty-text {
-  font-size: 30rpx;
-  color: #CCC;
-}
-
-.empty-sub {
-  font-size: 26rpx;
-  color: #DDD;
-  margin-top: 8rpx;
-}
-
-/* 底部输入 */
+/* 底部输入 - 固定在键盘上方 */
 .input-bar {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  bottom: 0; left: 0; right: 0;
   background: #FFFFFF;
   padding: 16rpx 24rpx;
   padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
-  box-shadow: 0 -2rpx 12rpx rgba(0,0,0,0.04);
-  z-index: 10;
+  box-shadow: 0 -2rpx 12rpx rgba(0,0,0,0.06);
+  z-index: 100;
+  transition: bottom 0.15s;
 }
-
 .input-wrap {
-  background: #F8F8F8;
-  border-radius: 40rpx;
+  background: #F5F5F5;
+  border-radius: 36rpx;
   padding: 6rpx 6rpx 6rpx 24rpx;
 }
-
 .whisper-input {
-  flex: 1;
-  height: 72rpx;
-  font-size: 28rpx;
+  flex: 1; height: 68rpx; font-size: 28rpx;
 }
-
 .send-btn {
   background: linear-gradient(135deg, #FF6B8A, #FF85A2);
-  color: #FFF;
-  border-radius: 36rpx;
-  padding: 16rpx 32rpx;
-  font-size: 26rpx;
-  font-weight: 500;
-  white-space: nowrap;
+  color: #FFF; border-radius: 32rpx;
+  padding: 14rpx 28rpx; font-size: 26rpx; font-weight: 500;
 }
-
-.send-btn:active {
-  opacity: 0.8;
-}
+.send-btn:active { opacity: 0.8; }

@@ -61,13 +61,16 @@ function fetchWeather() {
   return new Promise((resolve) => {
     const cached = storage.getWeatherCache();
     if (cached && Date.now() - cached.time < 30 * 60 * 1000) {
+      // 缓存有效，但名字始终读最新值
+      cached.data.myName = storage.getMyName() || '我';
+      cached.data.partnerName = storage.getPartnerName() || 'TA';
       resolve(cached.data);
       return;
     }
 
     const data = getSeasonalWeather();
-    data.boyName = storage.getBoyName();
-    data.girlName = storage.getGirlName();
+    data.myName = storage.getMyName() || '我';
+    data.partnerName = storage.getPartnerName() || 'TA';
     data.location = '📍 和你在一起的地方';
     storage.setWeatherCache({ time: Date.now(), data });
     resolve(data);

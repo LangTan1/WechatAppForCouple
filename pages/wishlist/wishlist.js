@@ -19,6 +19,7 @@ Page({
   onShow() {
     this.loadWishes();
     this.syncFromCloud();
+    storage.updateLastView('wish');
   },
 
   async syncFromCloud() {
@@ -80,9 +81,11 @@ Page({
     const wishes = storage.getWishes();
     const newWish = {
       id: Date.now(),
+      role: storage.getCurrentRole(),
       title: text,
       done: false,
-      emoji: '💫'
+      emoji: '💫',
+      createdAt: Date.now()
     };
     wishes.push(newWish);
     storage.setWishes(wishes);

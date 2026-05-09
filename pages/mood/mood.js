@@ -19,15 +19,17 @@ Page({
     todayMood: null,
     partnerMood: null,
     recentMoods: [],
-    boyName: '浪',
-    girlName: '琳琳',
-    isDev: false
+    myName: '',
+    partnerName: '',
+    isDev: false,
+    currentRole: ''
   },
 
   onLoad() { this.loadData(); },
   onShow() {
     this.loadData();
     this.syncFromCloud();
+    storage.updateLastView('mood');
   },
 
   async syncFromCloud() {
@@ -46,8 +48,9 @@ Page({
 
     this.setData({
       isDev: isDev,
-      boyName: storage.getBoyName(),
-      girlName: storage.getGirlName(),
+      currentRole: storage.getCurrentRole(),
+      myName: storage.getMyName(),
+      partnerName: storage.getPartnerName(),
       todayMood: storage.getTodayMood(),
       partnerMood: storage.getPartnerTodayMood(),
       recentMoods: recentMoods,
@@ -90,7 +93,8 @@ Page({
       date: dateStr,
       mood: this.data.selectedMood,
       note: this.data.noteText.trim(),
-      time: timeStr
+      time: timeStr,
+      createdAt: Date.now()
     };
 
     const moods = storage.getMoods();

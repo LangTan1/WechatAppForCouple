@@ -3,10 +3,10 @@ const storage = require('../../utils/storage');
 Page({
   data: {
     isDev: false,
-    boyName: '浪',
-    girlName: '琳琳',
-    boyAvatar: '',
-    girlAvatar: '',
+    myName: '',
+    partnerName: '',
+    myAvatar: '',
+    partnerAvatar: '',
     togetherDateStr: '2025年05月31日',
     togetherDateVal: '2025-05-31',
     togetherDays: 0,
@@ -17,7 +17,7 @@ Page({
     unlockedCount: 0,
     badgeStats: { bronze: 0, silver: 0, gold: 0, platinum: 0 },
     lockEnabled: false,
-    userKeyMasked: '****',
+    userKeyMasked: '',
     // 弹窗
     showDatePicker: false,
     showNameModal: false,
@@ -26,12 +26,11 @@ Page({
     rechargeItem: '',
     showKeyModal: false,
     newUserKey: '',
-    showRoleModal: false,
-    targetRole: '',
-    roleKey: '',
-    roleKeyError: '',
-    editBoyName: '',
-    editGirlName: ''
+    editMyName: '',
+    coinTxns: [],
+    coinMode: 'add',
+    coinAmount: '',
+    coinMessage: '',
   },
 
   onLoad() {
@@ -57,16 +56,20 @@ Page({
     const togetherDate = storage.getTogetherDate();
     const d = new Date(togetherDate);
     const togetherDateStr = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
-    const userKey = storage.getUserKey();
 
-    const coins = isDev ? storage.getGirlCoins() : storage.getGirlCoins();
+    // 双方都显示使用者(girlCoins)的余额
+    const coins = storage.getGirlCoins();
 
     this.setData({
       isDev,
-      boyName: storage.getBoyName(),
-      girlName: storage.getGirlName(),
-      boyAvatar: storage.getBoyAvatar(),
-      girlAvatar: storage.getGirlAvatar(),
+      myName: storage.getMyName(),
+      partnerName: storage.getPartnerName(),
+      myAvatar: storage.getMyAvatar(),
+      partnerAvatar: storage.getPartnerAvatar(),
+      myGender: storage.getMyGender(),
+      partnerGender: storage.getPartnerGender(),
+      myDefaultAvatar: storage.getDefaultAvatar(storage.getMyGender()),
+      partnerDefaultAvatar: storage.getDefaultAvatar(storage.getPartnerGender()),
       togetherDateStr,
       togetherDateVal: togetherDate,
       togetherDays: storage.getTogetherDays(),
@@ -77,27 +80,28 @@ Page({
       unlockedCount: storage.getUnlockedAchievementCount(),
       badgeStats: this.calcBadgeStats(),
       lockEnabled: storage.isLockEnabled(),
-      userKeyMasked: userKey ? userKey.slice(0, 2) + '****' : '未设置'
+      coinTxns: storage.getCoinTransactions().slice(-5).reverse()
     });
+
   },
 
   // ========== 头像 ==========
-  changeBoyAvatar() {
+  changeMyAvatar() {
     wx.chooseImage({
       count: 1, sizeType: ['compressed'], sourceType: ['album', 'camera'],
       success: (res) => {
-        storage.setBoyAvatar(res.tempFilePaths[0]);
-        this.setData({ boyAvatar: res.tempFilePaths[0] });
+        storage.setMyAvatar(res.tempFilePaths[0]);
+        this.setData({ myAvatar: res.tempFilePaths[0] });
         wx.showToast({ title: '头像已更新', icon: 'none' });
       }
     });
   },
-  changeGirlAvatar() {
+  changePartnerAvatar() {
     wx.chooseImage({
       count: 1, sizeType: ['compressed'], sourceType: ['album', 'camera'],
       success: (res) => {
-        storage.setGirlAvatar(res.tempFilePaths[0]);
-        this.setData({ girlAvatar: res.tempFilePaths[0] });
+        storage.setPartnerAvatar(res.tempFilePaths[0]);
+        this.setData({ partnerAvatar: res.tempFilePaths[0] });
         wx.showToast({ title: '头像已更新', icon: 'none' });
       }
     });
@@ -113,18 +117,58 @@ Page({
   sendRecharge() {
     const amount = parseInt(this.data.rechargeAmount) || 10;
     const exchangeItem = this.data.rechargeItem.trim() || '一个拥抱 💕';
-    storage.addCoinRequest(amount, exchangeItem, storage.getGirlName());
+    storage.addCoinRequest(amount, exchangeItem, storage.getMyName());
     this.setData({ showRechargeModal: false });
-    wx.showToast({ title: '请求已发送，等浪批准 💌', icon: 'none' });
+    wx.showToast({ title: '请求已发送 💌', icon: 'none' });
   },
 
-  // ========== 开发者发币 ==========
-  addCoins(e) {
-    const amount = parseInt(e.currentTarget.dataset.amount);
-    const newBalance = this.data.coinBalance + amount;
-    storage.setGirlCoins(newBalance);
-    this.setData({ coinBalance: newBalance });
-    wx.showToast({ title: `已发放 ${amount} 💖`, icon: 'none' });
+  // ========== 开发者发币/扣币 ==========
+  switchCoinMode(e) {
+    this.setData({ coinMode: e.currentTarget.dataset.mode });
+  },
+  onCoinAmount(e) {
+    this.setData({ coinAmount: e.detail.value });
+  },
+  onCoinMessage(e) {
+    this.setData({ coinMessage: e.detail.value });
+  },
+  submitCoins() {
+    const amount = parseInt(this.data.coinAmount);
+    if (!amount || amount <= 0) {
+      wx.showToast({ title: '请输入有效数量', icon: 'none' });
+      return;
+    }
+    const isAdd = this.data.coinMode === 'add';
+    const msg = this.data.coinMessage.trim();
+    const doChange = () => {
+      const newBalance = isAdd
+        ? this.data.coinBalance + amount
+        : Math.max(0, this.data.coinBalance - amount);
+      storage.setGirlCoins(newBalance);
+      // 记录交易
+      const txns = storage.getCoinTransactions();
+      txns.push({
+        id: Date.now(),
+        type: isAdd ? 'add' : 'sub',
+        amount: amount,
+        message: msg,
+        by: storage.getMyName(),
+        time: new Date().toLocaleString('zh-CN')
+      });
+      storage.setCoinTransactions(txns);
+      this.setData({ coinBalance: newBalance, coinAmount: '', coinMessage: '' });
+      wx.showToast({ title: isAdd ? `已发放 ${amount} 💖` : `已扣除 ${amount}`, icon: 'none' });
+    };
+    if (amount >= 200) {
+      wx.showModal({
+        title: '确认操作',
+        content: `确定要${isAdd ? '发放' : '扣除'} ${amount} 爱心币吗？`,
+        confirmColor: '#FF6B8A',
+        success: (res) => { if (res.confirm) doChange(); }
+      });
+    } else {
+      doChange();
+    }
   },
 
   // ========== 开发者管理使用者密钥 ==========
@@ -142,41 +186,6 @@ Page({
     wx.showToast({ title: '使用者密钥已更新', icon: 'none' });
   },
 
-  // ========== 角色切换 ==========
-  switchRole() {
-    const targetRole = this.data.isDev ? 'user' : 'dev';
-    this.setData({
-      showRoleModal: true, targetRole, roleKey: '', roleKeyError: ''
-    });
-  },
-  hideRoleModal() { this.setData({ showRoleModal: false }); },
-  onRoleKey(e) { this.setData({ roleKey: e.detail.value, roleKeyError: '' }); },
-  confirmSwitchRole() {
-    const key = this.data.roleKey.trim();
-    if (!key) { this.setData({ roleKeyError: '请输入密钥' }); return; }
-    const targetRole = this.data.targetRole;
-
-    if (targetRole === 'dev') {
-      if (!storage.verifyDevKey(key)) {
-        this.setData({ roleKeyError: '开发者密钥不正确' }); return;
-      }
-    } else {
-      if (!storage.verifyUserKey(key)) {
-        this.setData({ roleKeyError: '使用者密钥不正确' }); return;
-      }
-    }
-
-    storage.setCurrentRole(targetRole);
-    this.setData({ showRoleModal: false });
-    wx.showToast({
-      title: targetRole === 'dev' ? '已切换为开发者 🔧' : '已切换为使用者 💕',
-      icon: 'none', duration: 1500
-    });
-    setTimeout(() => {
-      wx.reLaunch({ url: '/pages/index/index' });
-    }, 1500);
-  },
-
   // ========== 设置 ==========
   editTogetherDate() { this.setData({ showDatePicker: true }); },
   hideDatePicker() { this.setData({ showDatePicker: false }); },
@@ -188,23 +197,20 @@ Page({
     this.refreshData();
   },
 
-  editNames() {
+  editMyNameFn() {
     this.setData({
       showNameModal: true,
-      editBoyName: this.data.boyName,
-      editGirlName: this.data.girlName
+      editMyName: this.data.myName
     });
   },
   hideNameModal() { this.setData({ showNameModal: false }); },
-  onEditBoyName(e) { this.setData({ editBoyName: e.detail.value }); },
-  onEditGirlName(e) { this.setData({ editGirlName: e.detail.value }); },
-  saveNames() {
-    const { editBoyName, editGirlName } = this.data;
-    if (!editBoyName.trim() || !editGirlName.trim()) {
+  onEditMyName(e) { this.setData({ editMyName: e.detail.value }); },
+  saveMyName() {
+    const name = this.data.editMyName.trim();
+    if (!name) {
       wx.showToast({ title: '名字不能为空～', icon: 'none' }); return;
     }
-    storage.setBoyName(editBoyName.trim());
-    storage.setGirlName(editGirlName.trim());
+    storage.setMyName(name);
     this.setData({ showNameModal: false });
     wx.showToast({ title: '昵称已更新 💕', icon: 'none' });
     this.refreshData();
@@ -242,12 +248,36 @@ Page({
 
   resetApp() {
     wx.showModal({
-      title: '重新设置',
-      content: '这会清除所有本地数据，是否继续？',
+      title: '⚠️ 重新设置',
+      content: '将删除云端情侣空间，对方也将无法使用。此操作不可恢复！',
+      confirmText: '确认重置',
+      confirmColor: '#FF6B8A',
       success: (res) => {
         if (res.confirm) {
-          try { wx.clearStorageSync(); } catch (e) {}
-          wx.reLaunch({ url: '/pages/setup/setup' });
+          storage.unbindCouple().then(() => {
+            try { wx.clearStorageSync(); } catch (e) {}
+            wx.reLaunch({ url: '/pages/setup/setup' });
+          });
+        }
+      }
+    });
+  },
+
+  reBindApp() {
+    wx.showModal({
+      title: '重新绑定',
+      content: '解除当前绑定，重新输入邀请码。',
+      confirmColor: '#FF6B8A',
+      success: (res) => {
+        if (res.confirm) {
+          try {
+            wx.removeStorageSync('couple_doc_id');
+            wx.removeStorageSync('last_role');
+          } catch (e) {}
+          wx.showToast({ title: '已解除绑定', icon: 'none', duration: 1000 });
+          setTimeout(() => {
+            wx.reLaunch({ url: '/pages/setup/setup' });
+          }, 1000);
         }
       }
     });
@@ -261,7 +291,6 @@ Page({
 
   calcBadgeStats() {
     const achievements = storage.getAchievements();
-    // 成就等级定义（与 achievement.js 保持一致）
     const tierMap = {
       first_diary: 'bronze', first_whisper: 'bronze', first_photo: 'bronze',
       first_wish: 'bronze', first_order: 'bronze', wish_done: 'bronze', order_done_1: 'bronze',

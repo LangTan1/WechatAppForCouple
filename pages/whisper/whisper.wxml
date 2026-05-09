@@ -1,28 +1,36 @@
 <view class="page">
-  <!-- 悄悄话列表 -->
-  <view class="whisper-list">
-    <view class="whisper-item {{item.isBoy ? 'from-him' : 'from-her'}}" wx:for="{{whispers}}" wx:key="id">
-      <view class="whisper-bubble">
-        <view class="whisper-sender">{{item.sender}}</view>
-        <view class="whisper-content">{{item.content}}</view>
-        <view class="whisper-time">{{item.time}}</view>
-      </view>
-    </view>
-  </view>
-
   <!-- 空状态 -->
   <view class="empty" wx:if="{{whispers.length === 0}}">
     <text class="empty-emoji">💌</text>
     <text class="empty-text">还没有悄悄话哦～</text>
-    <text class="empty-sub">轻轻敲醒你沉睡的心灵</text>
+    <text class="empty-sub">给对方写一句悄悄话吧</text>
   </view>
+
+  <!-- 悄悄话列表 -->
+  <view class="whisper-list">
+    <block wx:for="{{whispers}}" wx:key="id">
+      <!-- 时间分割线 -->
+      <view wx:if="{{item.showTime}}" class="time-divider">
+        <text class="time-divider-text">{{item.time}}</text>
+      </view>
+      <!-- 消息气泡 -->
+      <view class="msg-row {{item.isMine ? 'mine' : 'theirs'}}">
+        <view class="msg-bubble">
+          <text class="msg-content">{{item.content}}</text>
+        </view>
+        <text class="msg-sender">{{item.sender}}</text>
+      </view>
+    </block>
+  </view>
+
+  <view style="height: 140rpx;"></view>
 
   <!-- 输入栏 -->
   <view class="input-bar">
     <view class="input-wrap flex-row">
       <input
         class="whisper-input"
-        placeholder="说句悄悄话..."
+        placeholder="说句悄悄话…"
         value="{{inputText}}"
         bindinput="onInput"
         confirm-type="send"

@@ -3,6 +3,14 @@ const storage = require('../../utils/storage');
 Page({
   data: {
     isDev: false,
+    // 一级分类
+    topCategories: [
+      { key: 'food', name: '食品', icon: '🍽️' },
+      { key: 'fruit', name: '水果', icon: '🍎' },
+      { key: 'other', name: '其他', icon: '🎁' },
+    ],
+    currentTopTab: 'food',
+    // 食品下的二级分类
     categories: [
       { key: 'meal', name: '正餐', icon: '🍚' },
       { key: 'drink', name: '甜品', icon: '🧋' },
@@ -29,7 +37,7 @@ Page({
 
     // ===== 开发者 =====
     devTabs: [
-      { key: 'menu', label: '菜单管理' },
+      { key: 'menu', label: '商品管理' },
       { key: 'orders', label: '订单队列' },
       { key: 'requests', label: '请求处理' },
     ],
@@ -50,8 +58,25 @@ Page({
     rejectReason: ''
   },
 
+  _pollTimer: null,
+
   onLoad() { this.init(); },
-  onShow() { this.init(); this.syncFromCloud(); },
+  onShow() {
+    this.init();
+    this.syncFromCloud();
+    storage.updateLastView('order');
+    this._startPolling();
+  },
+  onHide() { this._stopPolling(); },
+  onUnload() { this._stopPolling(); },
+
+  _startPolling() {
+    this._stopPolling();
+    this._pollTimer = setInterval(() => { this.syncFromCloud(); }, 5000);
+  },
+  _stopPolling() {
+    if (this._pollTimer) { clearInterval(this._pollTimer); this._pollTimer = null; }
+  },
 
   async syncFromCloud() {
     await storage.loadFromCloud();
@@ -140,8 +165,30 @@ Page({
   },
 
   filterUserTab() {
-    const items = this.data.allFoodItems.filter(item => item.category === this.data.currentTab);
+    const topTab = this.data.currentTopTab;
+    const subTab = this.data.currentTab;
+    let items;
+    if (topTab === 'food') {
+      items = this.data.allFoodItems.filter(item => item.category === subTab);
+    } else {
+      // 水果、其他：按 topCategory 过滤
+      items = this.data.allFoodItems.filter(item => item.topCategory === topTab);
+    }
     this.setData({ foodItems: items });
+  },
+
+  switchTopTab(e) {
+    const key = e.currentTarget.dataset.key;
+    this.setData({ currentTopTab: key });
+    // 切换一级分类时，食品默认选中第一个子分类
+    if (key === 'food') {
+      this.setData({ currentTab: 'meal' });
+    }
+    if (this.data.isDev) {
+      this.filterDevTab(this.data.currentTab);
+    } else {
+      this.filterUserTab();
+    }
   },
 
   switchTab(e) {
@@ -172,16 +219,25 @@ Page({
     const item = this.data.orderItem;
     if (!item) return;
     const price = item.price || 5;
-    if (this.data.myCoins < price) {
-      wx.showToast({ title: '爱心币不足～', icon: 'none' });
-      return;
+    if (price < 0) {
+      // 负价格：不扣币，订单提交给开发者，确认后发放爱心币
+      storage.addOrder(item);
+      this.setData({ orderItem: null });
+      this.loadUserData();
+      this.updateTabBadge();
+      wx.showToast({ title: `已提交！${item.name} 🎉`, icon: 'none', duration: 2000 });
+    } else {
+      if (this.data.myCoins < price) {
+        wx.showToast({ title: '爱心币不足～', icon: 'none' });
+        return;
+      }
+      storage.setGirlCoins(this.data.myCoins - price);
+      storage.addOrder(item);
+      this.setData({ myCoins: this.data.myCoins - price, orderItem: null });
+      this.loadUserData();
+      this.updateTabBadge();
+      wx.showToast({ title: `下单成功！${item.name} 🎉`, icon: 'none', duration: 2000 });
     }
-    storage.setGirlCoins(this.data.myCoins - price);
-    storage.addOrder(item);
-    this.setData({ myCoins: this.data.myCoins - price, orderItem: null });
-    this.loadUserData();
-    this.updateTabBadge();
-    wx.showToast({ title: `下单成功！${item.name} 🎉`, icon: 'none', duration: 2000 });
   },
 
   // 随机选择
@@ -210,7 +266,7 @@ Page({
   sendRecharge() {
     const amount = parseInt(this.data.rechargeAmount) || 10;
     const item = this.data.rechargeItem.trim() || '一个拥抱 💕';
-    storage.addCoinRequest(amount, item, storage.getGirlName());
+    storage.addCoinRequest(amount, item, storage.getMyName());
     this.setData({ showRechargeModal: false });
     wx.showToast({ title: '充值请求已发送 💌', icon: 'none' });
   },
@@ -224,9 +280,9 @@ Page({
     const name = this.data.foodReqName.trim();
     if (!name) { wx.showToast({ title: '请输入食物名称～', icon: 'none' }); return; }
     const emoji = this.data.foodReqEmoji || '🍽️';
-    const girlName = storage.getGirlName();
+    const myName = storage.getMyName();
     // 加入食物请求
-    storage.addFoodRequest(name, emoji, girlName);
+    storage.addFoodRequest(name, emoji, myName);
     // 同时自动加入订单队列（待开发者处理）
     storage.addOrder({ name, emoji, price: 0, category: 'meal' });
     this.setData({ showFoodRequestModal: false });
@@ -260,9 +316,15 @@ Page({
     this.filterDevTab(this.data.currentTab);
   },
 
-  // 开发者分类筛选（修复 Issue #4）
+  // 开发者分类筛选
   filterDevTab(key) {
-    const items = this.data.allFoodItems.filter(item => item.category === key);
+    const topTab = this.data.currentTopTab;
+    let items;
+    if (topTab === 'food') {
+      items = this.data.allFoodItems.filter(item => item.category === key);
+    } else {
+      items = this.data.allFoodItems.filter(item => item.topCategory === topTab);
+    }
     this.setData({ devFoodItems: items, currentTab: key });
   },
 
@@ -280,18 +342,26 @@ Page({
 
   // 菜单管理
   showAddFood() {
+    const topTab = this.data.currentTopTab;
     this.setData({
       showFoodModal: true, editingFood: null,
-      foodForm: { name: '', emoji: '', catIdx: this.data.categoryKeys.indexOf(this.data.currentTab), price: '5' }
+      foodForm: {
+        name: '', emoji: '',
+        topCatIdx: this.data.topCategories.findIndex(c => c.key === topTab),
+        catIdx: topTab === 'food' ? this.data.categoryKeys.indexOf(this.data.currentTab) : 0,
+        price: '5'
+      }
     });
   },
   editMenuItem(e) {
     const item = e.currentTarget.dataset.item;
+    const topCatIdx = this.data.topCategories.findIndex(c => c.key === (item.topCategory || 'food'));
     const catIdx = this.data.categoryKeys.indexOf(item.category);
     this.setData({
       showFoodModal: true, editingFood: item,
       foodForm: {
         name: item.name, emoji: item.emoji || '',
+        topCatIdx: topCatIdx >= 0 ? topCatIdx : 0,
         catIdx: catIdx >= 0 ? catIdx : 0,
         price: String(item.price || 5)
       }
@@ -300,27 +370,29 @@ Page({
   hideFoodModal() { this.setData({ showFoodModal: false }); },
   onFoodFormName(e) { this.setData({ 'foodForm.name': e.detail.value }); },
   onFoodFormEmoji(e) { this.setData({ 'foodForm.emoji': e.detail.value }); },
+  onFoodFormTopCat(e) { this.setData({ 'foodForm.topCatIdx': parseInt(e.detail.value) }); },
   onFoodFormCat(e) { this.setData({ 'foodForm.catIdx': parseInt(e.detail.value) }); },
   onFoodFormPrice(e) { this.setData({ 'foodForm.price': e.detail.value }); },
 
   saveFood() {
-    const { name, emoji, catIdx, price } = this.data.foodForm;
+    const { name, emoji, topCatIdx, catIdx, price } = this.data.foodForm;
     if (!name.trim()) { wx.showToast({ title: '请输入名称', icon: 'none' }); return; }
-    const p = Math.max(1, Math.min(99, parseInt(price) || 5));
-    const category = this.data.categoryKeys[catIdx];
+    const p = Math.max(-9999, Math.min(9999, parseInt(price) || 5));
+    const topCategory = this.data.topCategories[topCatIdx].key;
+    const category = topCategory === 'food' ? this.data.categoryKeys[catIdx] : topCategory;
 
     let allItems = storage.getMenuItems();
     if (this.data.editingFood) {
       allItems = allItems.map(item => {
         if (item.id === this.data.editingFood.id) {
-          return { ...item, name: name.trim(), emoji: emoji || '🍽️', category, price: p, published: true };
+          return { ...item, name: name.trim(), emoji: emoji || '🍽️', topCategory, category, price: p, published: true };
         }
         return item;
       });
     } else {
       allItems.push({
         id: Date.now(), name: name.trim(), emoji: emoji || '🍽️',
-        category, price: p, published: true, addedBy: 'dev'
+        topCategory, category, price: p, published: true, addedBy: 'dev'
       });
     }
     storage.setMenuItems(allItems);
@@ -349,22 +421,31 @@ Page({
   acceptOrder(e) {
     const id = e.currentTarget.dataset.id;
     let orders = storage.getOrderQueue();
-    orders = orders.map(o => { if (o.id === id) return { ...o, status: 'cooking' }; return o; });
+    orders = orders.map(o => { if (o.id === id) return { ...o, status: 'cooking', updatedAt: Date.now() }; return o; });
     storage.setOrderQueue(orders);
     this.loadDevData();
     this.updateTabBadge();
     wx.showToast({ title: '已接受，开始制作 🍳', icon: 'none' });
   },
 
-  // 订单管理 - 标记完成
+  // 订单管理 - 标记完成（负价格订单发放爱心币）
   markOrderDone(e) {
     const id = e.currentTarget.dataset.id;
     let orders = storage.getOrderQueue();
-    orders = orders.map(o => { if (o.id === id) return { ...o, status: 'done' }; return o; });
+    const order = orders.find(o => o.id === id);
+    orders = orders.map(o => { if (o.id === id) return { ...o, status: 'done', updatedAt: Date.now() }; return o; });
     storage.setOrderQueue(orders);
+    // 负价格：给使用者发放对应的爱心币
+    if (order && order.price < 0) {
+      const giveCoins = -order.price;
+      const currentCoins = storage.getGirlCoins();
+      storage.setGirlCoins(currentCoins + giveCoins);
+      wx.showToast({ title: `已完成，已发放 ${giveCoins} 💖`, icon: 'none' });
+    } else {
+      wx.showToast({ title: '已完成 ✅', icon: 'none' });
+    }
     this.loadDevData();
     this.updateTabBadge();
-    wx.showToast({ title: '已完成 ✅', icon: 'none' });
   },
 
   // 订单管理 - 拒绝弹窗
@@ -378,7 +459,7 @@ Page({
     const reason = this.data.rejectReason.trim() || '暂时无法提供';
     let orders = storage.getOrderQueue();
     orders = orders.map(o => {
-      if (o.id === id) return { ...o, status: 'rejected', rejectReason: reason };
+      if (o.id === id) return { ...o, status: 'rejected', rejectReason: reason, updatedAt: Date.now() };
       return o;
     });
     storage.setOrderQueue(orders);

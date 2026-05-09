@@ -52,7 +52,7 @@
           <text wx:elif="{{partnerMood.mood === 'angry'}}">😤</text>
         </view>
         <view class="pm-info">
-          <view class="pm-name">{{isDev ? girlName : boyName}}</view>
+          <view class="pm-name">{{partnerName}}</view>
           <view class="pm-note" wx:if="{{partnerMood.note}}">{{partnerMood.note}}</view>
         </view>
       </view>
@@ -70,7 +70,7 @@
         <view class="hd-moods">
           <block wx:for="{{item.moods}}" wx:for-item="m" wx:key="id">
             <view class="hd-mood-item">
-              <text class="hd-role">{{m.role === 'dev' ? boyName : girlName}}</text>
+              <text class="hd-role">{{m.role === currentRole ? myName : partnerName}}</text>
               <text class="hd-emoji" wx:if="{{m.mood === 'happy'}}">😊</text>
               <text class="hd-emoji" wx:elif="{{m.mood === 'sweet'}}">🥰</text>
               <text class="hd-emoji" wx:elif="{{m.mood === 'calm'}}">😌</text>

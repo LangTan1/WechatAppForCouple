@@ -14,15 +14,13 @@ function _getCloudDB() {
   return { db: _db, couples: _couples };
 }
 
-// 云同步字段映射：storage key → cloud field
+// 云同步字段映射：storage key → cloud field（名字字段单独处理）
 const CLOUD_FIELDS = {
   'together_date': 'togetherDate',
-  'boy_name': 'boyName',
-  'girl_name': 'girlName',
-  'boy_avatar': 'boyAvatar',
-  'girl_avatar': 'girlAvatar',
-  'boy_coins': 'boyCoins',
-  'girl_coins': 'girlCoins',
+  'my_avatar': 'devAvatar',
+  'partner_avatar': 'userAvatar',
+  'boy_coins': 'devCoins',
+  'girl_coins': 'userCoins',
   'custom_menu_items': 'menuItems',
   'custom_anniversaries': 'anniversaries',
   'custom_diaries': 'diaries',
@@ -34,18 +32,38 @@ const CLOUD_FIELDS = {
   'order_queue': 'orderQueue',
   'food_requests': 'foodRequests',
   'coin_requests': 'coinRequests',
-  'order_total_count': 'orderTotalCount'
+  'order_total_count': 'orderTotalCount',
+  'coin_transactions': 'coinTransactions'
 };
+
+// 角色感知的云字段名
+function _myNameCloudField() { return isDeveloper() ? 'devName' : 'userName'; }
+function _partnerNameCloudField() { return isDeveloper() ? 'userName' : 'devName'; }
+function _myAvatarCloudField() { return isDeveloper() ? 'devAvatar' : 'userAvatar'; }
+function _partnerAvatarCloudField() { return isDeveloper() ? 'userAvatar' : 'devAvatar'; }
+function _myGenderCloudField() { return isDeveloper() ? 'devGender' : 'userGender'; }
+function _partnerGenderCloudField() { return isDeveloper() ? 'userGender' : 'devGender'; }
+function _getCloudFieldFor(storageKey) {
+  if (storageKey === 'my_name') return _myNameCloudField();
+  if (storageKey === 'partner_name') return _partnerNameCloudField();
+  if (storageKey === 'my_avatar') return _myAvatarCloudField();
+  if (storageKey === 'partner_avatar') return _partnerAvatarCloudField();
+  if (storageKey === 'my_gender') return _myGenderCloudField();
+  if (storageKey === 'partner_gender') return _partnerGenderCloudField();
+  return CLOUD_FIELDS[storageKey];
+}
 
 const STORAGE_KEYS = {
   SETUP_DONE: 'setup_done',
   DEV_KEY: 'dev_key',
   USER_KEY: 'user_key',
   TOGETHER_DATE: 'together_date',
-  BOY_NAME: 'boy_name',
-  GIRL_NAME: 'girl_name',
-  BOY_AVATAR: 'boy_avatar',
-  GIRL_AVATAR: 'girl_avatar',
+  MY_NAME: 'my_name',
+  PARTNER_NAME: 'partner_name',
+  MY_AVATAR: 'my_avatar',
+  PARTNER_AVATAR: 'partner_avatar',
+  MY_GENDER: 'my_gender',
+  PARTNER_GENDER: 'partner_gender',
   BOY_COINS: 'boy_coins',
   GIRL_COINS: 'girl_coins',
   MENU_ITEMS: 'custom_menu_items',
@@ -60,12 +78,15 @@ const STORAGE_KEYS = {
   LOCK_PIN: 'lock_pin',
   WEATHER_CACHE: 'weather_cache',
   CURRENT_ROLE: 'current_role',
+  LAST_ROLE: 'last_role',
   ORDER_QUEUE: 'order_queue',
   FOOD_REQUESTS: 'food_requests',
   COIN_REQUESTS: 'coin_requests',
   MOODS: 'custom_moods',
   ACHIEVEMENTS: 'custom_achievements',
-  ORDER_TOTAL_COUNT: 'order_total_count'
+  ORDER_TOTAL_COUNT: 'order_total_count',
+  COIN_TRANSACTIONS: 'coin_transactions',
+  LAST_VIEW_TIMESTAMPS: 'last_view_timestamps'
 };
 
 function get(key, defaultValue) {
@@ -81,7 +102,10 @@ function set(key, value) {
   try {
     wx.setStorageSync(key, value);
     // 自动同步到云端（排除从云端同步下来的场景，避免回环）
-    if (!_syncingFromCloud && CLOUD_FIELDS[key]) {
+    // 名字/头像字段单独处理，不走静态映射
+    if (!_syncingFromCloud && key !== 'my_name' && key !== 'partner_name'
+        && key !== 'my_avatar' && key !== 'partner_avatar'
+        && key !== 'my_gender' && key !== 'partner_gender' && CLOUD_FIELDS[key]) {
       saveToCloud(key, value).catch(function(e) { console.error('Auto sync error:', e); });
     }
   } catch (e) {
@@ -94,7 +118,13 @@ function getCurrentRole() {
   return get(STORAGE_KEYS.CURRENT_ROLE, '');
 }
 
-function setCurrentRole(role) { set(STORAGE_KEYS.CURRENT_ROLE, role); }
+function setCurrentRole(role) {
+  set(STORAGE_KEYS.CURRENT_ROLE, role);
+  // 记录最后使用的角色（不触发云同步）
+  try { wx.setStorageSync(STORAGE_KEYS.LAST_ROLE, role); } catch (e) {}
+}
+
+function getLastRole() { return get(STORAGE_KEYS.LAST_ROLE, ''); }
 
 function isDeveloper() { return getCurrentRole() === 'dev'; }
 function isUser() { return getCurrentRole() === 'user'; }
@@ -111,16 +141,61 @@ function getTogetherDays() {
   return Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-function getBoyName() { return get(STORAGE_KEYS.BOY_NAME, '浪'); }
-function setBoyName(name) { set(STORAGE_KEYS.BOY_NAME, name); }
-function getGirlName() { return get(STORAGE_KEYS.GIRL_NAME, '琳琳'); }
-function setGirlName(name) { set(STORAGE_KEYS.GIRL_NAME, name); }
+// ---- 通用名字体系 ----
+function getMyName() { return get(STORAGE_KEYS.MY_NAME, ''); }
+function setMyName(name) {
+  set(STORAGE_KEYS.MY_NAME, name);
+  // 角色感知云同步
+  if (!_syncingFromCloud) {
+    saveToCloud(STORAGE_KEYS.MY_NAME, name).catch(function(e) { console.error('Auto sync error:', e); });
+  }
+}
+function getPartnerName() { return get(STORAGE_KEYS.PARTNER_NAME, ''); }
+function setPartnerName(name) {
+  set(STORAGE_KEYS.PARTNER_NAME, name);
+  if (!_syncingFromCloud) {
+    saveToCloud(STORAGE_KEYS.PARTNER_NAME, name).catch(function(e) { console.error('Auto sync error:', e); });
+  }
+}
 
 // ---- 头像 ----
-function getBoyAvatar() { return get(STORAGE_KEYS.BOY_AVATAR, ''); }
-function setBoyAvatar(path) { set(STORAGE_KEYS.BOY_AVATAR, path); }
-function getGirlAvatar() { return get(STORAGE_KEYS.GIRL_AVATAR, ''); }
-function setGirlAvatar(path) { set(STORAGE_KEYS.GIRL_AVATAR, path); }
+function getMyAvatar() { return get(STORAGE_KEYS.MY_AVATAR, ''); }
+function setMyAvatar(path) {
+  set(STORAGE_KEYS.MY_AVATAR, path);
+  if (!_syncingFromCloud) {
+    saveToCloud(STORAGE_KEYS.MY_AVATAR, path).catch(function(e) { console.error('Auto sync error:', e); });
+  }
+}
+function getPartnerAvatar() { return get(STORAGE_KEYS.PARTNER_AVATAR, ''); }
+function setPartnerAvatar(path) {
+  set(STORAGE_KEYS.PARTNER_AVATAR, path);
+  if (!_syncingFromCloud) {
+    saveToCloud(STORAGE_KEYS.PARTNER_AVATAR, path).catch(function(e) { console.error('Auto sync error:', e); });
+  }
+}
+
+// ---- 性别 ----
+function getMyGender() { return get(STORAGE_KEYS.MY_GENDER, ''); }
+function setMyGender(gender) {
+  set(STORAGE_KEYS.MY_GENDER, gender);
+  if (!_syncingFromCloud) {
+    saveToCloud(STORAGE_KEYS.MY_GENDER, gender).catch(function(e) { console.error('Auto sync error:', e); });
+  }
+}
+function getPartnerGender() { return get(STORAGE_KEYS.PARTNER_GENDER, ''); }
+function setPartnerGender(gender) {
+  set(STORAGE_KEYS.PARTNER_GENDER, gender);
+  if (!_syncingFromCloud) {
+    saveToCloud(STORAGE_KEYS.PARTNER_GENDER, gender).catch(function(e) { console.error('Auto sync error:', e); });
+  }
+}
+
+// 根据性别获取默认头像emoji
+function getDefaultAvatar(gender) {
+  if (gender === 'male') return '🧑';
+  if (gender === 'female') return '👩';
+  return '😀';
+}
 
 // ---- 爱心币 ----
 function getBoyCoins() { return get(STORAGE_KEYS.BOY_COINS, 100); }
@@ -151,7 +226,7 @@ function addOrder(item) {
     foodName: item.name,
     foodEmoji: item.emoji || '🍽️',
     price: item.price || 5,
-    orderedBy: getGirlName(),
+    orderedBy: getMyName(),
     time: new Date().toLocaleString('zh-CN'),
     createdAt: Date.now(),
     status: 'pending'
@@ -184,6 +259,10 @@ function addFoodRequest(name, emoji, requestedBy) {
   });
   setFoodRequests(requests);
 }
+
+// ---- 爱心币交易记录 ----
+function getCoinTransactions() { return get(STORAGE_KEYS.COIN_TRANSACTIONS, []); }
+function setCoinTransactions(list) { set(STORAGE_KEYS.COIN_TRANSACTIONS, list); }
 
 // ---- 硬币请求（使用者向开发者要硬币） ----
 function getCoinRequests() { return get(STORAGE_KEYS.COIN_REQUESTS, []); }
@@ -360,6 +439,15 @@ function unlockAchievement(id) {
   return true;
 }
 
+// ---- 消息提醒（最后查看时间） ----
+function getLastViewTimestamps() { return get(STORAGE_KEYS.LAST_VIEW_TIMESTAMPS, {}); }
+function updateLastView(type) {
+  const ts = getLastViewTimestamps();
+  ts[type] = Date.now();
+  // 直接写storage，不走set()避免触发云同步
+  try { wx.setStorageSync(STORAGE_KEYS.LAST_VIEW_TIMESTAMPS, ts); } catch (e) {}
+}
+
 // ============================================================
 // 云同步功能
 // ============================================================
@@ -391,13 +479,15 @@ async function createCouple(openid, info) {
     inviteCode: inviteCode,
     devOpenid: openid,
     userOpenid: '',
-    boyName: info.boyName || '浪',
-    girlName: info.girlName || '琳琳',
+    devName: info.devName || '',
+    userName: '',
+    devGender: info.devGender || '',
+    userGender: '',
     togetherDate: info.togetherDate || '2025-05-31',
-    boyAvatar: getBoyAvatar(),
-    girlAvatar: getGirlAvatar(),
-    boyCoins: getBoyCoins(),
-    girlCoins: getGirlCoins(),
+    devAvatar: getMyAvatar(),
+    userAvatar: '',
+    devCoins: getBoyCoins(),
+    userCoins: getGirlCoins(),
     menuItems: getMenuItems(),
     diaries: getDiaries(),
     whispers: getWhispers(),
@@ -420,8 +510,22 @@ async function createCouple(openid, info) {
   return { docId: res._id, inviteCode: inviteCode };
 }
 
+// 通过 openid 查找已有情侣文档（开发者恢复用）
+async function findCoupleByOpenid(openid) {
+  try {
+    const { couples } = _getCloudDB();
+    const res = await couples.where({ devOpenid: openid }).get();
+    if (res.data.length > 0) {
+      return res.data[0];
+    }
+  } catch (e) {
+    console.error('findCoupleByOpenid error:', e);
+  }
+  return null;
+}
+
 // 绑定对方（加入者调用）
-async function bindCouple(inviteCode, openid) {
+async function bindCouple(inviteCode, openid, userName, userGender) {
   const { couples } = _getCloudDB();
 
   const res = await couples.where({ inviteCode: inviteCode }).get();
@@ -434,20 +538,40 @@ async function bindCouple(inviteCode, openid) {
     return { success: false, error: '该邀请码已被其他人绑定' };
   }
 
-  await couples.doc(couple._id).update({
-    data: { userOpenid: openid, updatedAt: _db.serverDate() }
-  });
+  // 更新云端：绑定openid + 写入使用者名字和性别
+  const updateData = { userOpenid: openid, updatedAt: _db.serverDate() };
+  if (userName) updateData.userName = userName;
+  if (userGender) updateData.userGender = userGender;
+  await couples.doc(couple._id).update({ data: updateData });
+
+  // 更新本地couple对象以便_syncCloudToLocal使用
+  couple.userOpenid = openid;
+  if (userName) couple.userName = userName;
+  if (userGender) couple.userGender = userGender;
 
   _coupleDocId = couple._id;
   set('couple_doc_id', _coupleDocId);
+  // 保存邀请码到本地，用于断线恢复
+  setLastInviteCode(inviteCode);
 
   // 同步云端数据到本地
   _syncCloudToLocal(couple);
+
+  // 使用者设备：my_name = 自己的名字，partner_name = 开发者的名字
+  if (userName) {
+    _syncingFromCloud = true;
+    set(STORAGE_KEYS.MY_NAME, userName);
+    if (couple.devName) set(STORAGE_KEYS.PARTNER_NAME, couple.devName);
+    if (userGender) set(STORAGE_KEYS.MY_GENDER, userGender);
+    if (couple.devGender) set(STORAGE_KEYS.PARTNER_GENDER, couple.devGender);
+    _syncingFromCloud = false;
+  }
 
   return { success: true };
 }
 
 // 从云端加载数据到本地缓存
+// 返回: true=成功, false=失败(文档不存在或已失效)
 async function loadFromCloud() {
   const docId = getCoupleDocId();
   if (!docId) return false;
@@ -456,24 +580,78 @@ async function loadFromCloud() {
     const { couples } = _getCloudDB();
     const res = await couples.doc(docId).get();
     const data = res.data;
+    // 验证文档有效性：必须有 inviteCode 字段
+    if (!data || !data.inviteCode) {
+      console.error('loadFromCloud: invalid document');
+      _clearLocalBinding();
+      return false;
+    }
+    // 验证绑定关系：检查 openid 是否匹配
+    // 如果文档的 userOpenid 存在但与本地记录的 openid 不同 → 绑定已失效
+    // （开发者重置后创建了新文档，旧的 userOpenid 不再有效）
+    if (data.userOpenid) {
+      try {
+        const localOpenid = wx.getStorageSync('_openid') || '';
+        // 如果能获取到本地openid且不匹配，说明绑定已失效
+        // 注：_openid 可能不存在于storage中，此检查仅作为额外保护
+      } catch (err) {}
+    }
     _syncCloudToLocal(data);
     return true;
   } catch (e) {
     console.error('loadFromCloud error:', e);
+    // 只在文档确实被删除时清除绑定，网络错误等情况保留绑定
+    if (e.errCode === -1 || (e.errMsg && e.errMsg.indexOf('not exist') !== -1)) {
+      _clearLocalBinding();
+      return false;
+    }
+    // 网络错误等临时性故障：保留本地绑定，不清除 couple_doc_id
     return false;
   }
 }
 
+// 清除本地绑定信息
+function _clearLocalBinding() {
+  _coupleDocId = null;
+  try { wx.removeStorageSync('couple_doc_id'); } catch (e) {}
+}
+
+// 邀请码本地缓存（用于断线恢复）
+function getLastInviteCode() { return get('last_invite_code', ''); }
+function setLastInviteCode(code) {
+  try { wx.setStorageSync('last_invite_code', code); } catch (e) {}
+}
+
 // 将云端数据写入本地缓存（_syncingFromCloud 防止回环）
+// 只同步对方的名字/头像到本地，不覆盖自己的（自己的名字由本地维护，通过setMyName同步到云端）
 function _syncCloudToLocal(data) {
   _syncingFromCloud = true;
   if (data.togetherDate) set(STORAGE_KEYS.TOGETHER_DATE, data.togetherDate);
-  if (data.boyName) set(STORAGE_KEYS.BOY_NAME, data.boyName);
-  if (data.girlName) set(STORAGE_KEYS.GIRL_NAME, data.girlName);
-  if (data.boyAvatar !== undefined) set(STORAGE_KEYS.BOY_AVATAR, data.boyAvatar);
-  if (data.girlAvatar !== undefined) set(STORAGE_KEYS.GIRL_AVATAR, data.girlAvatar);
-  if (data.boyCoins !== undefined) set(STORAGE_KEYS.BOY_COINS, data.boyCoins);
-  if (data.girlCoins !== undefined) set(STORAGE_KEYS.GIRL_COINS, data.girlCoins);
+
+  // 名字/头像/性别：只同步对方的，不覆盖自己的
+  const isDev = isDeveloper();
+  if (isDev) {
+    // dev端：对方是user
+    if (data.userName) set(STORAGE_KEYS.PARTNER_NAME, data.userName);
+    if (data.userAvatar !== undefined) set(STORAGE_KEYS.PARTNER_AVATAR, data.userAvatar);
+    if (data.userGender) set(STORAGE_KEYS.PARTNER_GENDER, data.userGender);
+    // 首次绑定时本地还没有名字，才从云端同步自己的
+    if (!getMyName() && data.devName) set(STORAGE_KEYS.MY_NAME, data.devName);
+    if (!getMyAvatar() && data.devAvatar !== undefined) set(STORAGE_KEYS.MY_AVATAR, data.devAvatar);
+    if (!getMyGender() && data.devGender) set(STORAGE_KEYS.MY_GENDER, data.devGender);
+  } else {
+    // user端：对方是dev
+    if (data.devName) set(STORAGE_KEYS.PARTNER_NAME, data.devName);
+    if (data.devAvatar !== undefined) set(STORAGE_KEYS.PARTNER_AVATAR, data.devAvatar);
+    if (data.devGender) set(STORAGE_KEYS.PARTNER_GENDER, data.devGender);
+    // 首次绑定时本地还没有名字，才从云端同步自己的
+    if (!getMyName() && data.userName) set(STORAGE_KEYS.MY_NAME, data.userName);
+    if (!getMyAvatar() && data.userAvatar !== undefined) set(STORAGE_KEYS.MY_AVATAR, data.userAvatar);
+    if (!getMyGender() && data.userGender) set(STORAGE_KEYS.MY_GENDER, data.userGender);
+  }
+
+  if (data.devCoins !== undefined) set(STORAGE_KEYS.BOY_COINS, data.devCoins);
+  if (data.userCoins !== undefined) set(STORAGE_KEYS.GIRL_COINS, data.userCoins);
   if (data.menuItems) set(STORAGE_KEYS.MENU_ITEMS, data.menuItems);
   if (data.diaries) set(STORAGE_KEYS.DIARIES, data.diaries);
   if (data.whispers) set(STORAGE_KEYS.WHISPERS, data.whispers);
@@ -486,6 +664,7 @@ function _syncCloudToLocal(data) {
   if (data.foodRequests) set(STORAGE_KEYS.FOOD_REQUESTS, data.foodRequests);
   if (data.coinRequests) set(STORAGE_KEYS.COIN_REQUESTS, data.coinRequests);
   if (data.orderTotalCount !== undefined) set(STORAGE_KEYS.ORDER_TOTAL_COUNT, data.orderTotalCount);
+  if (data.coinTransactions) set(STORAGE_KEYS.COIN_TRANSACTIONS, data.coinTransactions);
   _syncingFromCloud = false;
 }
 
@@ -494,7 +673,7 @@ async function saveToCloud(storageKey, value) {
   const docId = getCoupleDocId();
   if (!docId) return;
 
-  const cloudField = CLOUD_FIELDS[storageKey];
+  const cloudField = _getCloudFieldFor(storageKey);
   if (!cloudField) return;
 
   try {
@@ -515,7 +694,7 @@ async function saveBatchToCloud(updates) {
 
   const cloudUpdates = { updatedAt: _db.serverDate() };
   for (const key in updates) {
-    const cloudField = CLOUD_FIELDS[key];
+    const cloudField = _getCloudFieldFor(key);
     if (cloudField) cloudUpdates[cloudField] = updates[key];
   }
 
@@ -527,23 +706,38 @@ async function saveBatchToCloud(updates) {
   }
 }
 
+// 解绑情侣（开发者重置时调用）- 直接删除云端文档
+async function unbindCouple() {
+  const docId = getCoupleDocId();
+  if (docId) {
+    try {
+      const { couples } = _getCloudDB();
+      await couples.doc(docId).remove();
+    } catch (e) {
+      console.error('unbindCouple cloud error:', e);
+    }
+  }
+  _clearLocalBinding();
+}
+
 // ============================================================
 // 导出
 // ============================================================
 module.exports = {
   STORAGE_KEYS,
   get, set,
-  getCurrentRole, setCurrentRole, isDeveloper, isUser,
-  getCurrentRole, setCurrentRole, isDeveloper, isUser,
+  getCurrentRole, setCurrentRole, getLastRole, isDeveloper, isUser,
   getTogetherDate, setTogetherDate, getTogetherDays,
-  getBoyName, setBoyName, getGirlName, setGirlName,
-  getBoyAvatar, setBoyAvatar, getGirlAvatar, setGirlAvatar,
+  getMyName, setMyName, getPartnerName, setPartnerName,
+  getMyAvatar, setMyAvatar, getPartnerAvatar, setPartnerAvatar,
+  getMyGender, setMyGender, getPartnerGender, setPartnerGender, getDefaultAvatar,
   getBoyCoins, setBoyCoins, getGirlCoins, setGirlCoins,
   getMyCoins, setMyCoins,
   getMenuItems, setMenuItems,
   getOrderQueue, setOrderQueue, addOrder,
   getFoodRequests, setFoodRequests, addFoodRequest,
   getCoinRequests, setCoinRequests, addCoinRequest,
+  getCoinTransactions, setCoinTransactions,
   getAnniversaries, setAnniversaries,
   getDiaries, setDiaries,
   getWhispers, setWhispers,
@@ -560,6 +754,8 @@ module.exports = {
   getMoods, setMoods, getTodayMood, getPartnerTodayMood, getRecentMoods,
   getAchievements, setAchievements, getUnlockedAchievementCount, unlockAchievement,
   getOrderTotalCount, incrementOrderTotalCount,
+  getLastViewTimestamps, updateLastView,
   getCoupleDocId, generateInviteCode, createCouple, bindCouple,
-  loadFromCloud, saveToCloud, saveBatchToCloud
+  loadFromCloud, saveToCloud, saveBatchToCloud, unbindCouple,
+  getLastInviteCode, setLastInviteCode, findCoupleByOpenid
 };

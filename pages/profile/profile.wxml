@@ -2,23 +2,23 @@
   <!-- 情侣信息头 -->
   <view class="profile-header">
     <view class="couple-avatars flex-center">
-      <view class="avatar-wrap" bindtap="changeBoyAvatar">
-        <view class="avatar boy-avatar flex-center">
-          <image wx:if="{{boyAvatar}}" src="{{boyAvatar}}" mode="aspectFill" class="avatar-img" />
-          <text wx:else>🧑</text>
+      <view class="avatar-wrap" bindtap="changeMyAvatar">
+        <view class="avatar my-avatar flex-center">
+          <image wx:if="{{myAvatar}}" src="{{myAvatar}}" mode="aspectFill" class="avatar-img" />
+          <text wx:else>{{myDefaultAvatar}}</text>
         </view>
-        <text class="avatar-name">{{boyName}}</text>
+        <text class="avatar-name">{{myName || '未设置'}}</text>
         <text class="avatar-edit">📷</text>
       </view>
       <view class="heart-connector">
         <text class="heart-beat">❤️</text>
       </view>
-      <view class="avatar-wrap" bindtap="changeGirlAvatar">
-        <view class="avatar girl-avatar flex-center">
-          <image wx:if="{{girlAvatar}}" src="{{girlAvatar}}" mode="aspectFill" class="avatar-img" />
-          <text wx:else>👩</text>
+      <view class="avatar-wrap" bindtap="changePartnerAvatar">
+        <view class="avatar partner-avatar flex-center">
+          <image wx:if="{{partnerAvatar}}" src="{{partnerAvatar}}" mode="aspectFill" class="avatar-img" />
+          <text wx:else>{{partnerDefaultAvatar}}</text>
         </view>
-        <text class="avatar-name">{{girlName}}</text>
+        <text class="avatar-name">{{partnerName || '等待绑定'}}</text>
         <text class="avatar-edit">📷</text>
       </view>
     </view>
@@ -70,40 +70,40 @@
         <text class="coin-big">{{coinBalance}}</text>
         <text class="coin-unit">爱心币</text>
       </view>
-      <view class="recharge-btn-full" bindtap="showRecharge">💌 向浪申请充值</view>
+      <view class="recharge-btn-full" bindtap="showRecharge">💌 申请充值</view>
+      <!-- 交易记录 -->
+      <view wx:if="{{coinTxns.length > 0}}" class="txn-list">
+        <view class="txn-item" wx:for="{{coinTxns}}" wx:key="id">
+          <view class="txn-row flex-between">
+            <text class="txn-desc">{{item.type === 'add' ? '+' : '-'}}{{item.amount}} 💖 {{item.by ? 'by ' + item.by : ''}}</text>
+            <text class="txn-time">{{item.time}}</text>
+          </view>
+          <view wx:if="{{item.message}}" class="txn-msg">💬 {{item.message}}</view>
+        </view>
+      </view>
     </c-card>
   </view>
 
   <!-- ===== 开发者模式：爱心币管理 ===== -->
   <view wx:if="{{isDev}}">
     <c-card title="💖 爱心币管理">
-      <view class="coin-row flex-between">
-        <view class="coin-info">
-          <view class="coin-balance-title">琳琳的余额</view>
-          <view class="coin-balance-num">{{coinBalance}} 💖</view>
+      <view class="coin-manage">
+        <view class="coin-balance-row flex-center">
+          <text class="coin-balance-label">{{partnerName || '对方'}}的余额</text>
+          <text class="coin-balance-num">{{coinBalance}} 💖</text>
         </view>
-        <view class="coin-actions flex-row">
-          <view class="coin-btn" bindtap="addCoins" data-amount="{{10}}">+10</view>
-          <view class="coin-btn" bindtap="addCoins" data-amount="{{50}}">+50</view>
-          <view class="coin-btn primary" bindtap="addCoins" data-amount="{{100}}">+100</view>
+        <view class="coin-input-row flex-row">
+          <view class="coin-mode-toggle flex-row">
+            <view class="coin-mode-btn {{coinMode === 'add' ? 'active' : ''}}" bindtap="switchCoinMode" data-mode="add">增加</view>
+            <view class="coin-mode-btn {{coinMode === 'sub' ? 'active' : ''}}" bindtap="switchCoinMode" data-mode="sub">减少</view>
+          </view>
+          <input class="coin-amount-input" type="number" placeholder="数量" value="{{coinAmount}}" bindinput="onCoinAmount" />
+          <view class="coin-submit-btn" bindtap="submitCoins">{{coinMode === 'add' ? '发放' : '扣除'}}</view>
         </view>
+        <input class="coin-msg-input" placeholder="留言（可选）" value="{{coinMessage}}" bindinput="onCoinMessage" maxlength="50" />
       </view>
-      <view class="coin-hint">直接发放爱心币给琳琳</view>
     </c-card>
 
-    <!-- 使用者密钥管理 -->
-    <c-card title="🔑 使用者密钥">
-      <view class="key-info">
-        <view class="key-row flex-between">
-          <text>当前密钥</text>
-          <text class="key-val">{{userKeyMasked}}</text>
-        </view>
-        <view class="key-row flex-between" bindtap="changeUserKey">
-          <text>修改使用者密钥</text>
-          <text class="set-arrow">›</text>
-        </view>
-      </view>
-    </c-card>
   </view>
 
   <!-- 设置 -->
@@ -113,22 +113,23 @@
       <text class="set-val">{{togetherDateStr}}</text>
       <text class="set-arrow">›</text>
     </view>
-    <view class="setting-item flex-between" bindtap="editNames">
-      <text>修改昵称</text>
+    <!-- 双方都可修改自己的昵称 -->
+    <view class="setting-item flex-between" bindtap="editMyNameFn">
+      <text>修改我的昵称</text>
       <text class="set-arrow">›</text>
     </view>
     <view class="setting-item flex-between">
       <text>应用锁</text>
       <switch checked="{{lockEnabled}}" bindchange="onLockSwitch" color="#FF6B8A" />
     </view>
-    <!-- 切换角色 -->
-    <view class="setting-item flex-between" bindtap="switchRole">
-      <text>切换角色</text>
-      <text class="set-val">{{isDev ? '开发者 → 使用者' : '使用者 → 开发者'}}</text>
+    <!-- 仅开发者显示重新设置 -->
+    <view wx:if="{{isDev}}" class="setting-item flex-between" bindtap="resetApp">
+      <text>重新设置</text>
       <text class="set-arrow">›</text>
     </view>
-    <view class="setting-item flex-between" bindtap="resetApp">
-      <text>重新设置</text>
+    <!-- 使用者显示重新绑定 -->
+    <view wx:if="{{!isDev}}" class="setting-item flex-between" bindtap="reBindApp">
+      <text>重新绑定</text>
       <text class="set-arrow">›</text>
     </view>
   </c-card>
@@ -145,38 +146,10 @@
         <text class="form-label">用什么交换</text>
         <input class="form-input" placeholder="比如：一个抱抱、按摩一次…" value="{{rechargeItem}}" bindinput="onRechargeItem" maxlength="50" />
       </view>
-      <view class="modal-desc">浪看到后会决定是否批准 💌</view>
+      <view class="modal-desc">对方看到后会决定是否批准 💌</view>
       <view class="modal-btns flex-row">
         <view class="mbtn cancel" bindtap="hideRecharge">取消</view>
         <view class="mbtn confirm" bindtap="sendRecharge">发送请求</view>
-      </view>
-    </view>
-  </view>
-
-  <!-- 修改使用者密钥弹窗（开发者） -->
-  <view class="overlay" wx:if="{{showKeyModal}}" bindtap="hideKeyModal">
-    <view class="modal-card" catchtap="noop">
-      <view class="modal-title">🔑 修改使用者密钥</view>
-      <input class="key-input" type="password" placeholder="输入新的使用者密钥" value="{{newUserKey}}" bindinput="onNewUserKey" maxlength="20" />
-      <view class="modal-btns flex-row" style="margin-top: 20rpx;">
-        <view class="mbtn cancel" bindtap="hideKeyModal">取消</view>
-        <view class="mbtn confirm" bindtap="saveUserKey">保存</view>
-      </view>
-    </view>
-  </view>
-
-  <!-- 切换角色验证弹窗 -->
-  <view class="overlay" wx:if="{{showRoleModal}}" bindtap="hideRoleModal">
-    <view class="modal-card" catchtap="noop">
-      <view class="modal-title">{{targetRole === 'dev' ? '🔧 切换到开发者' : '💕 切换到使用者'}}</view>
-      <view class="modal-desc">
-        {{targetRole === 'dev' ? '请输入开发者密钥' : '请输入使用者密钥'}}
-      </view>
-      <input class="key-input" type="password" placeholder="请输入密钥" value="{{roleKey}}" bindinput="onRoleKey" maxlength="20" />
-      <view class="key-hint" wx:if="{{roleKeyError}}">{{roleKeyError}}</view>
-      <view class="modal-btns flex-row" style="margin-top: 20rpx;">
-        <view class="mbtn cancel" bindtap="hideRoleModal">取消</view>
-        <view class="mbtn confirm" bindtap="confirmSwitchRole">确认切换</view>
       </view>
     </view>
   </view>
@@ -195,28 +168,24 @@
     </view>
   </view>
 
-  <!-- 修改昵称弹窗 -->
+  <!-- 修改昵称弹窗（仅编辑自己的名字） -->
   <view class="overlay" wx:if="{{showNameModal}}" bindtap="hideNameModal">
     <view class="modal-card" catchtap="noop">
-      <view class="modal-title">修改昵称</view>
+      <view class="modal-title">修改我的昵称</view>
       <view class="form-row">
-        <text class="form-label">👨 男生</text>
-        <input class="form-input" value="{{editBoyName}}" bindinput="onEditBoyName" maxlength="10" />
-      </view>
-      <view class="form-row">
-        <text class="form-label">👩 女生</text>
-        <input class="form-input" value="{{editGirlName}}" bindinput="onEditGirlName" maxlength="10" />
+        <text class="form-label">我的名字</text>
+        <input class="form-input" value="{{editMyName}}" bindinput="onEditMyName" maxlength="10" />
       </view>
       <view class="modal-btns flex-row">
         <view class="mbtn cancel" bindtap="hideNameModal">取消</view>
-        <view class="mbtn confirm" bindtap="saveNames">保存</view>
+        <view class="mbtn confirm" bindtap="saveMyName">保存</view>
       </view>
     </view>
   </view>
 
   <!-- 页脚 -->
   <view class="footer">
-    <text>琳的生活菜单 v1.0</text>
+    <text>琳浪小栈 v1.0</text>
     <text class="footer-heart">Made with 💕</text>
   </view>
   <view style="height: 40rpx;"></view>

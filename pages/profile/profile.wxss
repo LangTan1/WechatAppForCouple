@@ -17,8 +17,8 @@
   border: 4rpx solid rgba(255,255,255,0.6); font-size: 48rpx; overflow: hidden;
 }
 .avatar-img { width: 100%; height: 100%; }
-.boy-avatar { background: linear-gradient(135deg, #FFD700, #FFA500); }
-.girl-avatar { background: linear-gradient(135deg, #FFB6C1, #FF69B4); }
+.my-avatar { background: linear-gradient(135deg, #FFD700, #FFA500); }
+.partner-avatar { background: linear-gradient(135deg, #FFB6C1, #FF69B4); }
 .avatar-name { font-size: 26rpx; font-weight: 500; }
 .avatar-edit {
   position: absolute; bottom: 28rpx; right: -4rpx;
@@ -137,6 +137,41 @@
 .mbtn { flex: 1; padding: 22rpx 0; border-radius: 16rpx; text-align: center; font-size: 28rpx; font-weight: 500; }
 .mbtn.cancel { background: #F5F5F5; color: #999; }
 .mbtn.confirm { background: linear-gradient(135deg, #FF6B8A, #FF85A2); color: #FFF; }
+
+/* 爱心币管理 */
+.coin-manage { padding: 8rpx 0; }
+.coin-balance-row { gap: 16rpx; margin-bottom: 24rpx; }
+.coin-balance-label { font-size: 26rpx; color: #999; }
+.coin-balance-num { font-size: 36rpx; font-weight: 700; color: #FF6B8A; }
+.coin-input-row { gap: 12rpx; align-items: center; }
+.coin-mode-toggle { background: #F5F5F5; border-radius: 12rpx; overflow: hidden; }
+.coin-mode-btn {
+  padding: 16rpx 28rpx; font-size: 26rpx; color: #999;
+  transition: all 0.2s;
+}
+.coin-mode-btn.active { background: linear-gradient(135deg, #FF6B8A, #FF85A2); color: #FFF; border-radius: 12rpx; }
+.coin-amount-input {
+  flex: 1; background: #F8F8F8; border-radius: 12rpx;
+  padding: 16rpx 20rpx; font-size: 28rpx; text-align: center;
+}
+.coin-submit-btn {
+  background: linear-gradient(135deg, #FF6B8A, #FF85A2);
+  color: #FFF; padding: 16rpx 32rpx; border-radius: 12rpx;
+  font-size: 28rpx; font-weight: 500; white-space: nowrap;
+}
+.coin-msg-input {
+  background: #F8F8F8; border-radius: 12rpx; padding: 16rpx 20rpx;
+  font-size: 26rpx; margin-top: 12rpx;
+}
+
+/* 交易记录 */
+.txn-list { margin-top: 20rpx; border-top: 1rpx solid #F0F0F0; padding-top: 16rpx; }
+.txn-item { padding: 10rpx 0; border-bottom: 1rpx solid #F8F8F8; }
+.txn-item:last-child { border-bottom: none; }
+.txn-row { align-items: center; }
+.txn-desc { font-size: 24rpx; color: #666; }
+.txn-time { font-size: 20rpx; color: #CCC; }
+.txn-msg { font-size: 22rpx; color: #FF6B8A; margin-top: 4rpx; }
 
 /* 页脚 */
 .footer { text-align: center; padding: 40rpx 0; color: #CCC; font-size: 24rpx; line-height: 1.8; }

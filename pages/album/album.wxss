@@ -45,7 +45,7 @@
   background: #FFF; border-radius: 16rpx; overflow: hidden;
   box-shadow: 0 4rpx 16rpx rgba(255,107,138,0.06);
 }
-.photo-wrap { width: 100%; height: 260rpx; position: relative; overflow: hidden; }
+.photo-wrap { width: 100%; height: 340rpx; position: relative; overflow: hidden; }
 .photo-wrap .photo-img { width: 100%; height: 100%; }
 .photo-wrap .photo-emoji { font-size: 64rpx; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #FFF5F5; }
 
@@ -53,17 +53,48 @@
 .photo-desc-text { font-size: 24rpx; color: #555; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .photo-date-text { font-size: 22rpx; color: #BBB; flex-shrink: 0; margin-left: 8rpx; }
 
-/* ===== 照片预览 ===== */
+/* ===== 照片预览（支持缩放） ===== */
 .preview-overlay {
   position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.92); z-index: 200;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.95); z-index: 200;
+  display: flex; flex-direction: column;
 }
-.preview-img { width: 100%; max-height: 70vh; }
-.preview-emoji { font-size: 120rpx; }
-.preview-info { margin-top: 30rpx; text-align: center; color: #FFF; }
-.preview-desc { font-size: 30rpx; display: block; margin-bottom: 8rpx; }
-.preview-date { font-size: 24rpx; opacity: 0.6; }
+.preview-close {
+  position: absolute; top: 60rpx; right: 30rpx;
+  color: #FFF; font-size: 40rpx; z-index: 210;
+  width: 60rpx; height: 60rpx; display: flex;
+  align-items: center; justify-content: center;
+}
+.preview-movable-area {
+  flex: 1; width: 100%;
+}
+.preview-movable-view {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+}
+.preview-img { width: 100%; height: 80vh; }
+.preview-bottom {
+  background: rgba(0,0,0,0.6); padding: 20rpx 24rpx;
+  max-height: 40vh;
+}
+.preview-info { text-align: center; color: #FFF; margin-bottom: 16rpx; }
+.preview-desc { font-size: 28rpx; display: block; margin-bottom: 4rpx; }
+.preview-date { font-size: 22rpx; opacity: 0.6; }
+
+/* 评论 */
+.comment-list { max-height: 200rpx; margin-bottom: 12rpx; }
+.comment-item { padding: 8rpx 0; }
+.comment-by { font-size: 22rpx; color: #FFB6C1; margin-right: 8rpx; }
+.comment-text { font-size: 24rpx; color: #EEE; }
+.comment-input-row { gap: 12rpx; align-items: center; }
+.comment-input {
+  flex: 1; background: rgba(255,255,255,0.15); border-radius: 24rpx;
+  padding: 14rpx 24rpx; font-size: 26rpx; color: #FFF;
+}
+.comment-input::placeholder { color: rgba(255,255,255,0.5); }
+.comment-send {
+  color: #FFB6C1; font-size: 26rpx; font-weight: 500; padding: 14rpx 8rpx;
+}
 
 /* ===== 空状态 ===== */
 .empty { padding: 100rpx 0; text-align: center; display: flex; flex-direction: column; align-items: center; }

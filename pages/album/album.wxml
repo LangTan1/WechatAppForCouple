@@ -68,13 +68,31 @@
     </view>
   </view>
 
-  <!-- 照片预览 -->
-  <view class="preview-overlay" wx:if="{{previewPhoto}}" bindtap="closePreview">
-    <image wx:if="{{previewPhoto.url}}" src="{{previewPhoto.url}}" mode="aspectFit" class="preview-img" />
-    <text wx:else class="preview-emoji">{{previewPhoto.emoji || '📸'}}</text>
-    <view class="preview-info">
-      <text class="preview-desc">{{previewPhoto.desc || '未命名'}}</text>
-      <text class="preview-date">{{previewPhoto.date}}</text>
+  <!-- 照片预览（支持缩放+评论） -->
+  <view class="preview-overlay" wx:if="{{previewPhoto}}">
+    <view class="preview-close" bindtap="closePreview">✕</view>
+    <movable-area class="preview-movable-area" scale-area>
+      <movable-view class="preview-movable-view" direction="all" scale scale-min="1" scale-max="4" scale-value="{{previewScale}}">
+        <image wx:if="{{previewPhoto.url}}" src="{{previewPhoto.url}}" mode="aspectFit" class="preview-img" show-menu-by-longpress />
+      </movable-view>
+    </movable-area>
+    <view class="preview-bottom">
+      <view class="preview-info">
+        <text class="preview-desc">{{previewPhoto.desc || '未命名'}}</text>
+        <text class="preview-date">{{previewPhoto.date}}</text>
+      </view>
+      <!-- 评论列表 -->
+      <scroll-view wx:if="{{previewPhoto.comments.length > 0}}" class="comment-list" scroll-y>
+        <view class="comment-item" wx:for="{{previewPhoto.comments}}" wx:key="id">
+          <text class="comment-by">{{item.by}}</text>
+          <text class="comment-text">{{item.text}}</text>
+        </view>
+      </scroll-view>
+      <!-- 评论输入 -->
+      <view class="comment-input-row flex-row">
+        <input class="comment-input" placeholder="写个评论…" value="{{commentText}}" bindinput="onCommentInput" bindconfirm="addComment" />
+        <view class="comment-send" bindtap="addComment">发送</view>
+      </view>
     </view>
   </view>
 

@@ -13,10 +13,10 @@
       <view class="recharge-btn" bindtap="showRecharge">充值</view>
     </view>
 
-    <!-- 使用者子 Tab：菜单 / 我的订单 -->
+    <!-- 使用者子 Tab：商城 / 我的订单 -->
     <view class="user-tabs flex-row">
       <view class="user-tab flex-center {{userTab === 'menu' ? 'active' : ''}}" bindtap="switchUserTab" data-tab="menu">
-        <text>🍽️ 菜单</text>
+        <text>🛍️ 商城</text>
       </view>
       <view class="user-tab flex-center {{userTab === 'orders' ? 'active' : ''}}" bindtap="switchUserTab" data-tab="orders">
         <text>📋 我的订单</text>
@@ -24,21 +24,36 @@
       </view>
     </view>
 
-    <!-- 菜单视图 -->
+    <!-- 商城视图 -->
     <view wx:if="{{userTab === 'menu'}}">
-      <view class="random-bar">
+      <!-- 一级分类 -->
+      <view class="top-category-tabs flex-row">
+        <view wx:for="{{topCategories}}" wx:key="key"
+          class="top-cat-tab flex-center {{currentTopTab === item.key ? 'active' : ''}}"
+          data-key="{{item.key}}" bindtap="switchTopTab">
+          <text>{{item.icon}} {{item.name}}</text>
+        </view>
+      </view>
+
+      <!-- 食品的二级分类 -->
+      <view wx:if="{{currentTopTab === 'food'}}" class="category-tabs flex-row">
+        <view wx:for="{{categories}}" wx:key="key"
+          class="cat-tab flex-center {{currentTab === item.key ? 'active' : ''}}"
+          data-key="{{item.key}}" bindtap="switchTab">
+          <text>{{item.icon}} {{item.name}}</text>
+        </view>
+      </view>
+
+      <view wx:if="{{currentTopTab === 'food'}}" class="random-bar">
         <view class="random-btn flex-center" bindtap="randomPick">
           <text class="random-icon">🎲</text>
           <text>帮我决定今天吃什么</text>
         </view>
       </view>
 
-      <view class="category-tabs flex-row">
-        <view wx:for="{{categories}}" wx:key="key"
-          class="cat-tab flex-center {{currentTab === item.key ? 'active' : ''}}"
-          data-key="{{item.key}}" bindtap="switchTab">
-          <text>{{item.icon}} {{item.name}}</text>
-        </view>
+      <!-- 许愿按钮（所有分类可用） -->
+      <view class="add-bar flex-center" bindtap="showRequestFood" style="margin:0 24rpx 12rpx;">
+        <text>💡 想要别的？许愿吧</text>
       </view>
 
       <scroll-view class="food-list" scroll-y>
@@ -55,10 +70,6 @@
           <text class="empty-text">菜单还没上架哦～</text>
         </view>
       </scroll-view>
-
-      <view class="add-bar flex-center" bindtap="showRequestFood">
-        <text>💡 想吃别的？向浪许愿吧</text>
-      </view>
     </view>
 
     <!-- 我的订单视图 -->
@@ -77,11 +88,11 @@
             <text class="order-emoji">{{item.foodEmoji || '🍽️'}}</text>
             <view>
               <view class="order-food">{{item.foodName}}</view>
-              <view class="order-by">💖 {{item.price || '待定价'}} 币 · {{item.time}}</view>
+              <view class="order-by">{{item.price < 0 ? '🎁 可获得 ' + (-item.price) + ' 币' : '💖 ' + (item.price || '待定价') + ' 币'}} · {{item.time}}</view>
             </view>
           </view>
           <view class="order-status {{item.status}}">
-            {{item.status === 'pending' ? '待处理' : item.status === 'cooking' ? '浪正在做' : item.status === 'done' ? '已完成' : '已拒绝'}}
+            {{item.status === 'pending' ? '待处理' : item.status === 'cooking' ? '对方正在做' : item.status === 'done' ? '已完成' : '已拒绝'}}
           </view>
         </view>
         <view class="reject-reason" wx:if="{{item.status === 'rejected' && item.rejectReason}}">
@@ -95,15 +106,21 @@
     <view class="overlay" wx:if="{{orderItem}}" bindtap="closeOrder">
       <view class="overlay-card" catchtap="noop">
         <text class="order-emoji">{{orderItem.emoji}}</text>
-        <text class="order-question">确定要点这个吗？</text>
+        <text class="order-question">确定要{{orderItem.price < 0 ? '兑换' : '点'}}这个吗？</text>
         <text class="order-food-name">{{orderItem.name}}</text>
-        <view class="order-detail flex-row"><text>价格：</text><text class="price-text">💖 {{orderItem.price || 5}} 币</text></view>
-        <view class="order-detail flex-row"><text>余额：</text><text class="balance-text">💖 {{myCoins}} 币</text></view>
-        <view wx:if="{{myCoins >= (orderItem.price || 5)}}" class="order-after">下单后剩余 <text class="after-num">💖 {{myCoins - (orderItem.price || 5)}}</text> 币</view>
-        <view wx:else class="order-no-money">😢 爱心币不够了，快去充值吧～</view>
+        <view wx:if="{{orderItem.price < 0}}">
+          <view class="order-detail flex-row"><text>可获得：</text><text class="price-text" style="color:#4CAF50;">💖 {{-orderItem.price}} 币</text></view>
+          <view class="order-after" style="color:#4CAF50;">提交后等待对方确认发放 💖</view>
+        </view>
+        <view wx:else>
+          <view class="order-detail flex-row"><text>价格：</text><text class="price-text">💖 {{orderItem.price || 5}} 币</text></view>
+          <view class="order-detail flex-row"><text>余额：</text><text class="balance-text">💖 {{myCoins}} 币</text></view>
+          <view wx:if="{{myCoins >= (orderItem.price || 5)}}" class="order-after">下单后剩余 <text class="after-num">💖 {{myCoins - (orderItem.price || 5)}}</text> 币</view>
+          <view wx:else class="order-no-money">😢 爱心币不够了，快去充值吧～</view>
+        </view>
         <view class="rr-btns flex-row">
           <view class="rr-btn cancel" bindtap="closeOrder">取消</view>
-          <view class="rr-btn confirm" bindtap="confirmOrder" wx:if="{{myCoins >= (orderItem.price || 5)}}">确认下单</view>
+          <view class="rr-btn confirm" bindtap="confirmOrder" wx:if="{{orderItem.price < 0 || myCoins >= (orderItem.price || 5)}}">确认</view>
         </view>
       </view>
     </view>
@@ -134,7 +151,7 @@
           <text class="add-label">用什么交换</text>
           <input class="add-input" placeholder="比如：一个拥抱、洗碗一次…" value="{{rechargeItem}}" bindinput="onRechargeItem" maxlength="50" />
         </view>
-        <view class="modal-desc-sm">请求会发给浪，由他决定是否批准 💌</view>
+        <view class="modal-desc-sm">请求会发给对方，由对方决定是否批准 💌</view>
         <view class="rr-btns flex-row">
           <view class="rr-btn cancel" bindtap="hideRecharge">取消</view>
           <view class="rr-btn confirm" bindtap="sendRecharge">发送请求</view>
@@ -148,7 +165,7 @@
         <view class="add-title">💡 想吃点什么</view>
         <view class="add-row flex-row">
           <text class="add-label">食物名称</text>
-          <input class="add-input" placeholder="告诉浪你想吃什么" value="{{foodReqName}}" bindinput="onFoodReqName" maxlength="20" />
+          <input class="add-input" placeholder="告诉对方你想吃什么" value="{{foodReqName}}" bindinput="onFoodReqName" maxlength="20" />
         </view>
         <view class="add-row flex-row">
           <text class="add-label">Emoji</text>
@@ -175,9 +192,18 @@
       </view>
     </view>
 
-    <!-- Tab 1: 菜单管理 -->
+    <!-- Tab 1: 商品管理 -->
     <view wx:if="{{devTab === 'menu'}}">
-      <view class="category-tabs flex-row">
+      <!-- 一级分类 -->
+      <view class="top-category-tabs flex-row">
+        <view wx:for="{{topCategories}}" wx:key="key"
+          class="top-cat-tab flex-center {{currentTopTab === item.key ? 'active' : ''}}"
+          data-key="{{item.key}}" bindtap="switchTopTab">
+          <text>{{item.icon}} {{item.name}}</text>
+        </view>
+      </view>
+      <!-- 食品的二级分类 -->
+      <view wx:if="{{currentTopTab === 'food'}}" class="category-tabs flex-row">
         <view wx:for="{{categories}}" wx:key="key"
           class="cat-tab flex-center {{currentTab === item.key ? 'active' : ''}}"
           data-key="{{item.key}}" bindtap="switchTab">
@@ -203,7 +229,7 @@
       </scroll-view>
 
       <view class="add-bar flex-center" bindtap="showAddFood">
-        <text>+ 添加菜品并上架</text>
+        <text>+ 添加商品并上架</text>
       </view>
     </view>
 
@@ -223,11 +249,11 @@
             <text class="order-emoji">{{item.foodEmoji || '🍽️'}}</text>
             <view>
               <view class="order-food">{{item.foodName}}</view>
-              <view class="order-by">{{item.orderedBy}} · {{item.time}}</view>
+              <view class="order-by">{{item.orderedBy}} · {{item.price < 0 ? '🎁 发放 ' + (-item.price) + ' 币' : '💖 ' + (item.price || 5) + ' 币'}} · {{item.time}}</view>
             </view>
           </view>
           <view class="order-status {{item.status}}">
-            {{item.status === 'pending' ? '待做' : '制作中'}}
+            {{item.status === 'pending' ? '待处理' : '进行中'}}
           </view>
         </view>
         <view class="order-actions flex-row" wx:if="{{item.status === 'pending'}}">
@@ -235,7 +261,7 @@
           <view class="oa-btn reject" bindtap="showRejectReason" data-id="{{item.id}}">✕ 拒绝</view>
         </view>
         <view class="order-actions flex-row" wx:if="{{item.status === 'cooking'}}">
-          <view class="oa-btn done" bindtap="markOrderDone" data-id="{{item.id}}">标记完成 ✅</view>
+          <view class="oa-btn done" bindtap="markOrderDone" data-id="{{item.id}}">{{item.price < 0 ? '确认发放 💖' : '标记完成 ✅'}}</view>
         </view>
       </view>
 
@@ -304,7 +330,7 @@
         <view class="add-title">拒绝订单</view>
         <view class="form-row">
           <text class="form-label">原因</text>
-          <input class="add-input" placeholder="告诉琳琳为什么拒绝…" value="{{rejectReason}}" bindinput="onRejectReason" maxlength="50" />
+          <input class="add-input" placeholder="告诉对方为什么拒绝…" value="{{rejectReason}}" bindinput="onRejectReason" maxlength="50" />
         </view>
         <view class="rr-btns flex-row">
           <view class="rr-btn cancel" bindtap="hideRejectModal">取消</view>
@@ -313,13 +339,13 @@
       </view>
     </view>
 
-    <!-- 添加/编辑菜品弹窗 -->
+    <!-- 添加/编辑商品弹窗 -->
     <view class="overlay" wx:if="{{showFoodModal}}" bindtap="hideFoodModal">
       <view class="overlay-card add-card" catchtap="noop">
-        <view class="add-title">{{editingFood ? '编辑' : '添加'}}菜品</view>
+        <view class="add-title">{{editingFood ? '编辑' : '添加'}}商品</view>
         <view class="add-row flex-row">
           <text class="add-label">名称</text>
-          <input class="add-input" placeholder="菜品名称" value="{{foodForm.name}}" bindinput="onFoodFormName" maxlength="20" />
+          <input class="add-input" placeholder="商品名称" value="{{foodForm.name}}" bindinput="onFoodFormName" maxlength="20" />
         </view>
         <view class="add-row flex-row">
           <text class="add-label">Emoji</text>
@@ -327,6 +353,12 @@
         </view>
         <view class="add-row flex-row">
           <text class="add-label">分类</text>
+          <picker range="{{topCategories}}" range-key="name" value="{{foodForm.topCatIdx}}" bindchange="onFoodFormTopCat">
+            <view class="add-picker">{{topCategories[foodForm.topCatIdx].name}}</view>
+          </picker>
+        </view>
+        <view class="add-row flex-row" wx:if="{{topCategories[foodForm.topCatIdx].key === 'food'}}">
+          <text class="add-label">子分类</text>
           <picker range="{{categoryNames}}" value="{{foodForm.catIdx}}" bindchange="onFoodFormCat">
             <view class="add-picker">{{categoryNames[foodForm.catIdx]}}</view>
           </picker>

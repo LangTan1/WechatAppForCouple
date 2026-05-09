@@ -15,8 +15,18 @@ Page({
     wishCount: 0,
     activities: [],
     todayMood: null,
-    partnerMood: null
+    partnerMood: null,
+    // 消息提醒
+    hasNewDiary: false,
+    hasNewWhisper: false,
+    hasNewOrder: false,
+    hasNewWish: false,
+    hasNewMood: false,
+    myName: '',
+    partnerName: '',
   },
+
+  _pollTimer: null,
 
   onLoad() {
     this.initData();
@@ -29,13 +39,53 @@ Page({
       togetherDays: storage.getTogetherDays()
     });
     this.refreshData();
-    this.syncFromCloud();
+    this._doSyncFromCloud();
+    this._startPolling();
   },
 
-  async syncFromCloud() {
-    await storage.loadFromCloud();
-    this.refreshData();
-    this.setData({ togetherDays: storage.getTogetherDays() });
+  onHide() {
+    this._stopPolling();
+  },
+
+  onUnload() {
+    this._stopPolling();
+  },
+
+  _startPolling() {
+    this._stopPolling();
+    this._pollTimer = setInterval(() => {
+      this._doSyncFromCloud();
+    }, 5000);
+  },
+
+  _stopPolling() {
+    if (this._pollTimer) {
+      clearInterval(this._pollTimer);
+      this._pollTimer = null;
+    }
+  },
+
+  async _doSyncFromCloud() {
+    const hadDoc = !!storage.getCoupleDocId();
+    const ok = await storage.loadFromCloud();
+    if (ok) {
+      this.refreshData();
+      this.setData({ togetherDays: storage.getTogetherDays() });
+    } else if (hadDoc && !storage.getCoupleDocId()) {
+      // 云端文档被删除（对方重置了）→ 弹窗提示
+      this._stopPolling();
+      wx.showModal({
+        title: '绑定已失效',
+        content: '对方已重置情侣空间，请与对方联系获取最新邀请码重新绑定。',
+        showCancel: false,
+        confirmText: '去绑定',
+        confirmColor: '#FF6B8A',
+        success: () => {
+          try { wx.clearStorageSync(); } catch (e) {}
+          wx.reLaunch({ url: '/pages/setup/setup' });
+        }
+      });
+    }
   },
 
   initData() {
@@ -106,6 +156,40 @@ Page({
       );
     }
 
+    // ===== 消息提醒检测 =====
+    const lastView = storage.getLastViewTimestamps();
+    const myRole = storage.getCurrentRole();
+    const partnerRole = myRole === 'dev' ? 'user' : 'dev';
+    const now = Date.now();
+
+    // 对方新日记
+    const hasNewDiary = diaries.some(function(d) {
+      return d.role === partnerRole && (d.createdAt || 0) > (lastView.diary || 0);
+    });
+
+    // 对方新悄悄话
+    const hasNewWhisper = whispers.some(function(w) {
+      return w.role === partnerRole && w.createdAt > (lastView.whisper || 0);
+    });
+
+    // 新订单状态变化（对方更新了订单状态）
+    const orders = storage.getOrderQueue();
+    const hasNewOrder = orders.some(function(o) {
+      return o.createdAt > (lastView.order || 0) || (o.updatedAt && o.updatedAt > (lastView.order || 0));
+    });
+
+    // 对方新愿望
+    const hasNewWish = wishes.some(function(w) {
+      return w.role === partnerRole && w.createdAt > (lastView.wish || 0);
+    });
+
+    // 对方今日新心情
+    const moods = storage.getMoods();
+    const todayStr = storage._todayStr();
+    const hasNewMood = moods.some(function(m) {
+      return m.role === partnerRole && m.date === todayStr && (m.createdAt || 0) > (lastView.mood || 0);
+    });
+
     this.setData({
       albumCount: albumPhotos.length,
       upcomingAnniversaries: upcoming,
@@ -113,8 +197,16 @@ Page({
       wishCount: undoneWishes,
       activities: activities.slice(0, 6),
       todayMood: storage.getTodayMood(),
-      partnerMood: storage.getPartnerTodayMood()
+      partnerMood: storage.getPartnerTodayMood(),
+      hasNewDiary: hasNewDiary,
+      hasNewWhisper: hasNewWhisper,
+      hasNewOrder: hasNewOrder,
+      hasNewWish: hasNewWish,
+      hasNewMood: hasNewMood,
+      myName: storage.getMyName() || '我',
+      partnerName: storage.getPartnerName() || 'TA'
     });
+
   },
 
   loadWeather() {

@@ -28,12 +28,12 @@
     </view>
     <view class="weather-partners flex-row">
       <view class="partner-item">
-        <text class="partner-name">{{weather.boyName || '浪'}}</text>
+        <text class="partner-name">{{weather.myName || '我'}}</text>
         <text class="partner-temp">{{weather.icon}} {{weather.temp}}°</text>
       </view>
       <view class="partner-divider">|</view>
       <view class="partner-item">
-        <text class="partner-name">{{weather.girlName || '琳琳'}}</text>
+        <text class="partner-name">{{weather.partnerName || 'TA'}}</text>
         <text class="partner-temp">{{weather.icon}} {{weather.temp}}°</text>
       </view>
     </view>
@@ -75,10 +75,10 @@
           <block wx:elif="{{todayMood.mood === 'angry'}}">😤</block>
         </text>
         <text class="ms-emoji" wx:else>😶</text>
-        <text class="ms-name">我</text>
+        <text class="ms-name">{{myName}}</text>
       </view>
       <view class="ms-divider">💕</view>
-      <view class="ms-item">
+      <view class="ms-item" style="position:relative;">
         <text class="ms-emoji" wx:if="{{partnerMood}}">
           <block wx:if="{{partnerMood.mood === 'happy'}}">😊</block>
           <block wx:elif="{{partnerMood.mood === 'sweet'}}">🥰</block>
@@ -87,7 +87,8 @@
           <block wx:elif="{{partnerMood.mood === 'angry'}}">😤</block>
         </text>
         <text class="ms-emoji" wx:else>😶</text>
-        <text class="ms-name">TA</text>
+        <text class="ms-name">{{partnerName}}</text>
+        <view wx:if="{{hasNewMood}}" class="red-dot"></view>
       </view>
     </view>
     <view class="ms-hint">
@@ -99,17 +100,20 @@
   <!-- 今日菜单区 -->
   <c-card title="今天想…" shadow="{{false}}" customStyle="background: linear-gradient(135deg, #FFF5F7, #FFEEF2);">
     <view class="today-menu flex-row">
-      <view class="menu-entry" bindtap="goMenu">
+      <view class="menu-entry" style="position:relative;" bindtap="goMenu">
         <view class="entry-icon">🍽️</view>
         <view class="entry-label">吃什么</view>
+        <view wx:if="{{hasNewOrder}}" class="red-dot"></view>
       </view>
-      <view class="menu-entry" bindtap="goDiary">
+      <view class="menu-entry" style="position:relative;" bindtap="goDiary">
         <view class="entry-icon">📝</view>
         <view class="entry-label">做了什么</view>
+        <view wx:if="{{hasNewDiary}}" class="red-dot"></view>
       </view>
-      <view class="menu-entry" bindtap="goWhisper">
+      <view class="menu-entry" style="position:relative;" bindtap="goWhisper">
         <view class="entry-icon">💌</view>
         <view class="entry-label">想说什么</view>
+        <view wx:if="{{hasNewWhisper}}" class="red-dot"></view>
       </view>
     </view>
   </c-card>
@@ -129,10 +133,11 @@
   </view>
 
   <view class="quick-cards flex-row" style="margin-top: 0;">
-    <view class="quick-card quick-card-full" bindtap="goWishlist">
+    <view class="quick-card quick-card-full" style="position:relative;" bindtap="goWishlist">
       <view class="qc-icon">✨</view>
       <view class="qc-title">愿望清单</view>
       <view class="qc-sub">{{wishCount}} 个未完成心愿</view>
+      <view wx:if="{{hasNewWish}}" class="red-dot"></view>
     </view>
   </view>
 

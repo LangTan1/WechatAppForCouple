@@ -40,6 +40,23 @@
 .random-btn:active { transform: scale(0.97); opacity: 0.9; }
 .random-icon { font-size: 36rpx; margin-right: 10rpx; }
 
+/* 一级分类 */
+.top-category-tabs {
+  margin: 0 24rpx 12rpx; gap: 12rpx;
+}
+.top-cat-tab {
+  flex: 1; background: #FFF; border-radius: 16rpx; padding: 18rpx 0;
+  font-size: 28rpx; color: #666; font-weight: 500;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04);
+  transition: all 0.3s;
+}
+.top-cat-tab.active {
+  background: linear-gradient(135deg, #FF6B8A, #FF85A2);
+  color: #FFF; font-weight: 600;
+  box-shadow: 0 4rpx 12rpx rgba(255,107,138,0.3);
+}
+
+/* 二级分类 */
 .category-tabs {
   margin: 0 24rpx 16rpx; background: #FFF;
   border-radius: 20rpx; padding: 8rpx;

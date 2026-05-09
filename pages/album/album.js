@@ -6,6 +6,8 @@ Page({
     albums: [],
     currentAlbum: { name: '', desc: '', photos: [] },
     previewPhoto: null,
+    previewScale: 1,
+    commentText: '',
     // 弹窗
     showAlbumModal: false,
     albumForm: { name: '', desc: '' },
@@ -15,7 +17,7 @@ Page({
   },
 
   onLoad() { this.loadAlbums(); },
-  onShow() { this.loadAlbums(); this.syncFromCloud(); },
+  onShow() { this.loadAlbums(); this.syncFromCloud(); storage.updateLastView('album'); },
 
   loadAlbums() {
     const albums = storage.getAlbums();
@@ -122,28 +124,45 @@ Page({
     const { url, desc } = this.data.photoForm;
     if (!url) { wx.showToast({ title: '请选择照片～', icon: 'none' }); return; }
 
-    const now = new Date();
-    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    wx.showLoading({ title: '上传中…' });
 
-    const newPhoto = {
-      id: Date.now(), url, desc: desc.trim() || '美好瞬间', date: dateStr
-    };
+    // 上传到云存储
+    const cloudPath = 'album/' + Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '.jpg';
+    wx.cloud.uploadFile({
+      cloudPath: cloudPath,
+      filePath: url,
+      success: (uploadRes) => {
+        const fileID = uploadRes.fileID;
+        const now = new Date();
+        const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-    let albums = storage.getAlbums();
-    albums = albums.map(a => {
-      if (a.id === this.data.currentAlbum.id) {
-        const photos = a.photos || [];
-        return { ...a, cover: a.cover || url, photos: [newPhoto, ...photos] };
+        const newPhoto = {
+          id: Date.now(), fileID: fileID, url: fileID,
+          desc: desc.trim() || '美好瞬间', date: dateStr
+        };
+
+        let albums = storage.getAlbums();
+        albums = albums.map(a => {
+          if (a.id === this.data.currentAlbum.id) {
+            const photos = a.photos || [];
+            return { ...a, cover: a.cover || fileID, photos: [newPhoto, ...photos] };
+          }
+          return a;
+        });
+        storage.setAlbums(albums);
+
+        this.setData({ showPhotoModal: false });
+        const updated = albums.find(a => a.id === this.data.currentAlbum.id);
+        if (updated) this.setData({ currentAlbum: { ...updated } });
+        wx.hideLoading();
+        wx.showToast({ title: '照片已保存 📸', icon: 'none' });
+      },
+      fail: (err) => {
+        console.error('上传照片失败:', err);
+        wx.hideLoading();
+        wx.showToast({ title: '上传失败，请重试', icon: 'none' });
       }
-      return a;
     });
-    storage.setAlbums(albums);
-
-    this.setData({ showPhotoModal: false });
-    // 刷新当前相册
-    const updated = albums.find(a => a.id === this.data.currentAlbum.id);
-    if (updated) this.setData({ currentAlbum: { ...updated } });
-    wx.showToast({ title: '照片已保存 📸', icon: 'none' });
   },
 
   // 预览照片
@@ -151,7 +170,55 @@ Page({
     this.setData({ previewPhoto: e.currentTarget.dataset.photo });
   },
   closePreview() {
-    this.setData({ previewPhoto: null });
+    this.setData({ previewPhoto: null, previewScale: 1, commentText: '' });
+  },
+
+  onCommentInput(e) {
+    this.setData({ commentText: e.detail.value });
+  },
+
+  addComment() {
+    const text = this.data.commentText.trim();
+    if (!text) return;
+    const photo = this.data.previewPhoto;
+    if (!photo) return;
+
+    const comment = {
+      id: Date.now(),
+      text: text,
+      by: storage.getMyName() || '匿名',
+      time: new Date().toLocaleString('zh-CN')
+    };
+
+    // 更新相册数据
+    let albums = storage.getAlbums();
+    let updated = false;
+    albums = albums.map(a => {
+      if (a.id === this.data.currentAlbum.id) {
+        const photos = (a.photos || []).map(p => {
+          if (p.id === photo.id) {
+            const comments = p.comments || [];
+            comments.push(comment);
+            updated = true;
+            return { ...p, comments };
+          }
+          return p;
+        });
+        return { ...a, photos };
+      }
+      return a;
+    });
+    if (updated) {
+      storage.setAlbums(albums);
+      // 更新当前预览照片和相册
+      const album = albums.find(a => a.id === this.data.currentAlbum.id);
+      const updatedPhoto = album.photos.find(p => p.id === photo.id);
+      this.setData({
+        previewPhoto: updatedPhoto,
+        commentText: '',
+        currentAlbum: { ...album }
+      });
+    }
   },
 
   noop() {},
