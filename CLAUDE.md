@@ -14,8 +14,11 @@
 ## 目录结构
 ```
 ├── app.js/json/wxss          # 全局入口、TabBar配置(4Tab：首页/商城/记录/我的)
+├── cloudfunctions/
+│   ├── coupleOps/             # 情侣空间数据库操作云函数（管理员权限）
+│   └── getOpenid/             # 获取openid云函数
 ├── utils/
-│   ├── storage.js             # 全部数据持久化+云同步（核心模块）
+│   ├── storage.js             # 全部数据持久化+云同步（核心模块，通过coupleOps云函数）
 │   ├── weather.js             # 纯本地季节模拟天气
 │   └── love-quotes.js         # 300句每日情话
 ├── components/card/           # 公共卡片组件
@@ -24,7 +27,7 @@
     ├── index/                 # 首页：天数+天气+情话+心情+纪念日+消息提醒红点+重置通知
     ├── menu/                  # 商城（双模式：使用者购物/开发者管理）
     ├── record/                # 记录入口（日记/悄悄话/相册/心情/更多）
-    ├── profile/               # 我的：头像+信息+爱心币管理+成就+设置
+    ├── profile/               # 我的：头像+信息+爱心币管理+成就+设置+查看邀请码
     ├── diary/                 # 恋爱日记
     ├── whisper/               # 悄悄话（气泡聊天，左右对齐，3秒轮询）
     ├── album/                 # 时光相册（云存储照片+评论+缩放预览）
@@ -39,7 +42,8 @@
 - **使用者**：通过邀请码绑定进入。购物、许愿、充值申请
 - 角色通过 `storage.getCurrentRole()` 判断
 - **角色不可切换**：使用者不能切换到开发者，开发者不能切换到使用者
-- 开发者"我的"页有"重新设置"，使用者有"重新绑定"
+- 开发者"我的"页有"重新设置"和"查看邀请码"，使用者有"重新绑定"
+- 查看邀请码：读取本地缓存的 `last_invite_code`，支持一键复制到剪贴板
 
 ## 通用名字+性别体系
 - 双方各自输入自己的名字和性别（🧑男/👩女），不再硬编码"浪/琳琳"
@@ -54,6 +58,14 @@
 ### 技术实现
 - 微信云开发环境：`cloud1-d0gzs51l9cbf4b9bc`
 - 云数据库集合：`couples`（单文档存储所有共享数据）
+- 数据库安全规则：`"read": "auth != null", "write": "auth != null"`（所有已登录用户可读写）
+- **所有跨设备数据库操作通过云函数 `coupleOps` 执行**（管理员权限，绕过安全规则）
+
+### 云函数 coupleOps
+- 位置：`cloudfunctions/coupleOps/`
+- 通过 `wx.cloud.callFunction({ name: 'coupleOps', data: { action, ... } })` 调用
+- openid 从服务端 `wxContext.OPENID` 获取，不依赖客户端传参
+- 支持操作：`createCouple`、`bindCouple`、`loadCouple`、`saveField`、`saveBatch`、`findCoupleByOpenid`、`unbindCouple`
 
 ### 绑定流程
 1. **创建者**：输入开发者密钥→输入名字+性别+日期→创建云端文档→生成6位邀请码
@@ -70,11 +82,12 @@
 - 使用者"重新绑定"：清除本地 `couple_doc_id` + `last_role` → 进入邀请码输入界面
 - 使用者检测失效：首页轮询时 `loadFromCloud` 失败 + `couple_doc_id` 被清除 → 弹窗提示"对方已重置" → 跳转绑定页
 
-### 关键函数（storage.js）
+### 关键函数（storage.js，全部通过云函数coupleOps执行）
 - `createCouple(openid, info)`：创建情侣文档，info含devName/devGender/togetherDate
-- `bindCouple(inviteCode, openid, userName, userGender)`：绑定对方
+- `bindCouple(inviteCode, userName, userGender)`：绑定对方（openid由云函数从服务端获取）
 - `loadFromCloud()`：从云端加载，验证inviteCode字段，失败时清除本地绑定
 - `saveToCloud(storageKey, value)`：角色感知的单字段云同步
+- `saveBatchToCloud(updates)`：批量保存多个字段到云端
 - `unbindCouple()`：删除云端文档+清除本地绑定
 - `getMyName()/setMyName()/getPartnerName()/setPartnerName()`
 - `getMyGender()/setMyGender()/getPartnerGender()/setPartnerGender()`
@@ -94,7 +107,8 @@
 - 我的订单：查看状态(pending/cooking/done/rejected)
 
 ### 开发者模式
-- Tab「商品管理」：按分类添加/编辑/删除商品，价格-9999~9999
+- Tab「商品管理」：按分类添加/编辑/删除商品，价格-9999~9999，支持负数（用户拍下后开发者确认发放爱心币）
+- 价格输入使用 `type="text"` 键盘（允许输入负号 `-`）
 - Tab「订单队列」：接受→标记完成。负价格订单显示"确认发放💖"
 - Tab「请求处理」：食物许愿+充值请求
 - 初始化预设：10种水果+8种情侣互动商品
@@ -129,6 +143,12 @@
 - 支持双指缩放预览（`movable-area` + `movable-view`）
 - 照片评论功能：评论存在照片的 `comments` 数组中，随相册同步
 
+## 头像系统
+- 头像上传到微信云存储（`wx.cloud.uploadFile`），存储 cloud fileID（如 `cloud://xxx/avatars/my_xxx.jpg`）
+- cloud fileID 全局可访问，任何设备都能加载，解决本地临时路径跨设备不可用的问题
+- 同步到云端的是 fileID 而非本地路径，对方设备可正常显示
+- `<image src="cloudFileID">` 原生支持 cloud fileID，无需额外处理
+
 ## 心情打卡系统
 - 5种心情：😊开心/🥰甜蜜/😌平静/😢难过/😤生气
 - 数据结构：`{ id, role, date, mood, note, time, createdAt }`
@@ -145,13 +165,14 @@
 功能数据：`custom_diaries`, `custom_whispers`, `custom_wishes`, `custom_anniversaries`, `custom_menu_items`, `custom_album`, `custom_moods`, `custom_achievements`
 订单系统：`order_queue`, `food_requests`, `coin_requests`, `order_total_count`, `coin_transactions`
 云同步：`couple_doc_id`
-其他：`last_quote_date`, `last_quote_index`, `weather_cache`, `last_view_timestamps`
+其他：`last_quote_date`, `last_quote_index`, `weather_cache`, `last_view_timestamps`, `last_invite_code`
 
 ## 云字段映射
 静态映射（CLOUD_FIELDS）：`together_date`→`togetherDate`, `boy_coins`→`devCoins`, `girl_coins`→`userCoins`, `custom_menu_items`→`menuItems`, `custom_diaries`→`diaries`, `custom_whispers`→`whispers`, `custom_wishes`→`wishes`, `custom_anniversaries`→`anniversaries`, `custom_album`→`albums`, `custom_moods`→`moods`, `custom_achievements`→`achievements`, `order_queue`→`orderQueue`, `food_requests`→`foodRequests`, `coin_requests`→`coinRequests`, `order_total_count`→`orderTotalCount`, `coin_transactions`→`coinTransactions`
 角色感知映射（`_getCloudFieldFor`）：`my_name`↔`devName`/`userName`, `partner_name`↔`userName`/`devName`, `my_avatar`↔`devAvatar`/`userAvatar`, `my_gender`↔`devGender`/`userGender`
 
 ## 注意事项
+- 微信隐私限制：无法通过 openid 读取对方的微信昵称/头像，只能靠用户自己填写的名字识别身份
 - 所有弹窗使用 `catchtap="noop"` + JS中 `noop(){}` 阻止穿透
 - storage.js 是唯一数据源
 - 不要添加任何网络请求API调用（除云开发API）
@@ -177,6 +198,10 @@
 - `_enterAfterCloudFail()`：网络失败但绑定保留时的降级进入
 - `confirmRebind()`：用户确认恢复绑定
 - `showFullBindInput()`：用户切换到完整绑定界面（新邀请码）
+
+## 部署注意事项
+- `cloudfunctions/coupleOps` 需要在微信开发者工具中右键→上传并部署（云端安装依赖）
+- `couples` 集合安全规则需设为 `"read": "auth != null", "write": "auth != null"`
 
 ## 已知待修复问题
 （暂无）

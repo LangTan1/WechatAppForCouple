@@ -1,18 +1,8 @@
 /**
- * 本地存储管理 + 云同步
+ * 本地存储管理 + 云同步（通过云函数coupleOps操作数据库，绕过安全规则限制）
  */
-let _db = null;
-let _couples = null;
 let _coupleDocId = null;  // 当前设备绑定的情侣文档ID
 let _syncingFromCloud = false;  // 防止云端→本地→云端回环
-
-function _getCloudDB() {
-  if (!_db) {
-    _db = wx.cloud.database();
-    _couples = _db.collection('couples');
-  }
-  return { db: _db, couples: _couples };
-}
 
 // 云同步字段映射：storage key → cloud field（名字字段单独处理）
 const CLOUD_FIELDS = {
@@ -470,9 +460,8 @@ function generateInviteCode() {
   return code;
 }
 
-// 创建情侣文档（创建者调用）- 用本地数据初始化云端文档
+// 创建情侣文档（创建者调用）- 通过云函数创建，拥有管理员权限
 async function createCouple(openid, info) {
-  const { couples } = _getCloudDB();
   const inviteCode = generateInviteCode();
 
   const docData = {
@@ -499,24 +488,32 @@ async function createCouple(openid, info) {
     orderQueue: getOrderQueue(),
     foodRequests: getFoodRequests(),
     coinRequests: getCoinRequests(),
-    orderTotalCount: getOrderTotalCount(),
-    createdAt: _db.serverDate(),
-    updatedAt: _db.serverDate()
+    orderTotalCount: getOrderTotalCount()
   };
 
-  const res = await couples.add({ data: docData });
-  _coupleDocId = res._id;
+  const res = await wx.cloud.callFunction({
+    name: 'coupleOps',
+    data: { action: 'createCouple', docData: docData, inviteCode: inviteCode }
+  });
+
+  if (!res.result || !res.result.success) {
+    throw new Error(res.result ? res.result.error : '创建失败');
+  }
+
+  _coupleDocId = res.result.docId;
   set('couple_doc_id', _coupleDocId);
-  return { docId: res._id, inviteCode: inviteCode };
+  return { docId: res.result.docId, inviteCode: inviteCode };
 }
 
 // 通过 openid 查找已有情侣文档（开发者恢复用）
 async function findCoupleByOpenid(openid) {
   try {
-    const { couples } = _getCloudDB();
-    const res = await couples.where({ devOpenid: openid }).get();
-    if (res.data.length > 0) {
-      return res.data[0];
+    const res = await wx.cloud.callFunction({
+      name: 'coupleOps',
+      data: { action: 'findCoupleByOpenid' }
+    });
+    if (res.result && res.result.success && res.result.couple) {
+      return res.result.couple;
     }
   } catch (e) {
     console.error('findCoupleByOpenid error:', e);
@@ -524,32 +521,24 @@ async function findCoupleByOpenid(openid) {
   return null;
 }
 
-// 绑定对方（加入者调用）
-async function bindCouple(inviteCode, openid, userName, userGender) {
-  const { couples } = _getCloudDB();
+// 绑定对方（加入者调用）- 通过云函数操作，绕过安全规则
+async function bindCouple(inviteCode, userName, userGender) {
+  const res = await wx.cloud.callFunction({
+    name: 'coupleOps',
+    data: {
+      action: 'bindCouple',
+      inviteCode: inviteCode,
+      userName: userName,
+      userGender: userGender
+    }
+  });
 
-  const res = await couples.where({ inviteCode: inviteCode }).get();
-  if (res.data.length === 0) {
-    return { success: false, error: '邀请码不存在' };
+  if (!res.result || !res.result.success) {
+    return { success: false, error: res.result ? res.result.error : '绑定失败' };
   }
 
-  const couple = res.data[0];
-  if (couple.userOpenid && couple.userOpenid !== openid) {
-    return { success: false, error: '该邀请码已被其他人绑定' };
-  }
-
-  // 更新云端：绑定openid + 写入使用者名字和性别
-  const updateData = { userOpenid: openid, updatedAt: _db.serverDate() };
-  if (userName) updateData.userName = userName;
-  if (userGender) updateData.userGender = userGender;
-  await couples.doc(couple._id).update({ data: updateData });
-
-  // 更新本地couple对象以便_syncCloudToLocal使用
-  couple.userOpenid = openid;
-  if (userName) couple.userName = userName;
-  if (userGender) couple.userGender = userGender;
-
-  _coupleDocId = couple._id;
+  const couple = res.result.couple;
+  _coupleDocId = res.result.docId;
   set('couple_doc_id', _coupleDocId);
   // 保存邀请码到本地，用于断线恢复
   setLastInviteCode(inviteCode);
@@ -570,42 +559,41 @@ async function bindCouple(inviteCode, openid, userName, userGender) {
   return { success: true };
 }
 
-// 从云端加载数据到本地缓存
+// 从云端加载数据到本地缓存（通过云函数，绕过安全规则）
 // 返回: true=成功, false=失败(文档不存在或已失效)
 async function loadFromCloud() {
   const docId = getCoupleDocId();
   if (!docId) return false;
 
   try {
-    const { couples } = _getCloudDB();
-    const res = await couples.doc(docId).get();
-    const data = res.data;
-    // 验证文档有效性：必须有 inviteCode 字段
+    const res = await wx.cloud.callFunction({
+      name: 'coupleOps',
+      data: { action: 'loadCouple', docId: docId }
+    });
+
+    if (!res.result || !res.result.success) {
+      // 云函数返回失败，可能是文档不存在
+      var errMsg = res.result ? (res.result.error || '') : '';
+      if (errMsg.indexOf('not exist') !== -1 || errMsg.indexOf('not found') !== -1) {
+        _clearLocalBinding();
+        return false;
+      }
+      // 其他错误保留绑定
+      return false;
+    }
+
+    var data = res.result.data;
     if (!data || !data.inviteCode) {
       console.error('loadFromCloud: invalid document');
       _clearLocalBinding();
       return false;
     }
-    // 验证绑定关系：检查 openid 是否匹配
-    // 如果文档的 userOpenid 存在但与本地记录的 openid 不同 → 绑定已失效
-    // （开发者重置后创建了新文档，旧的 userOpenid 不再有效）
-    if (data.userOpenid) {
-      try {
-        const localOpenid = wx.getStorageSync('_openid') || '';
-        // 如果能获取到本地openid且不匹配，说明绑定已失效
-        // 注：_openid 可能不存在于storage中，此检查仅作为额外保护
-      } catch (err) {}
-    }
+
     _syncCloudToLocal(data);
     return true;
   } catch (e) {
     console.error('loadFromCloud error:', e);
-    // 只在文档确实被删除时清除绑定，网络错误等情况保留绑定
-    if (e.errCode === -1 || (e.errMsg && e.errMsg.indexOf('not exist') !== -1)) {
-      _clearLocalBinding();
-      return false;
-    }
-    // 网络错误等临时性故障：保留本地绑定，不清除 couple_doc_id
+    // 网络错误等临时性故障：保留本地绑定
     return false;
   }
 }
@@ -668,7 +656,7 @@ function _syncCloudToLocal(data) {
   _syncingFromCloud = false;
 }
 
-// 保存单个字段到云端
+// 保存单个字段到云端（通过云函数，绕过安全规则）
 async function saveToCloud(storageKey, value) {
   const docId = getCoupleDocId();
   if (!docId) return;
@@ -677,42 +665,45 @@ async function saveToCloud(storageKey, value) {
   if (!cloudField) return;
 
   try {
-    const { couples } = _getCloudDB();
-    const updateData = {};
-    updateData[cloudField] = value;
-    updateData.updatedAt = _db.serverDate();
-    await couples.doc(docId).update({ data: updateData });
+    await wx.cloud.callFunction({
+      name: 'coupleOps',
+      data: { action: 'saveField', docId: docId, cloudField: cloudField, value: value }
+    });
   } catch (e) {
     console.error('saveToCloud error:', e);
   }
 }
 
-// 批量保存到云端
+// 批量保存到云端（通过云函数，绕过安全规则）
 async function saveBatchToCloud(updates) {
   const docId = getCoupleDocId();
   if (!docId) return;
 
-  const cloudUpdates = { updatedAt: _db.serverDate() };
+  const cloudUpdates = {};
   for (const key in updates) {
     const cloudField = _getCloudFieldFor(key);
     if (cloudField) cloudUpdates[cloudField] = updates[key];
   }
 
   try {
-    const { couples } = _getCloudDB();
-    await couples.doc(docId).update({ data: cloudUpdates });
+    await wx.cloud.callFunction({
+      name: 'coupleOps',
+      data: { action: 'saveBatch', docId: docId, updates: cloudUpdates }
+    });
   } catch (e) {
     console.error('saveBatchToCloud error:', e);
   }
 }
 
-// 解绑情侣（开发者重置时调用）- 直接删除云端文档
+// 解绑情侣（开发者重置时调用）- 通过云函数删除云端文档
 async function unbindCouple() {
   const docId = getCoupleDocId();
   if (docId) {
     try {
-      const { couples } = _getCloudDB();
-      await couples.doc(docId).remove();
+      await wx.cloud.callFunction({
+        name: 'coupleOps',
+        data: { action: 'unbindCouple', docId: docId }
+      });
     } catch (e) {
       console.error('unbindCouple cloud error:', e);
     }

@@ -334,7 +334,7 @@ Page({
     this.setData({ bindLoading: true, bindError: '' });
 
     try {
-      const result = await storage.bindCouple(code, openid, name, gender);
+      const result = await storage.bindCouple(code, name, gender);
       if (result.success) {
         storage.setCurrentRole('user');
         wx.showToast({ title: '绑定成功 💕', icon: 'none', duration: 1500 });
@@ -374,7 +374,7 @@ Page({
 
     try {
       // 使用保存的名字和性别重新绑定
-      var result = await storage.bindCouple(code, openid, storage.getMyName(), storage.getMyGender());
+      var result = await storage.bindCouple(code, storage.getMyName(), storage.getMyGender());
       if (result.success) {
         storage.setCurrentRole('user');
         wx.showToast({ title: '恢复成功 💕', icon: 'none', duration: 1500 });

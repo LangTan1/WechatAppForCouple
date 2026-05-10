@@ -85,24 +85,58 @@ Page({
 
   },
 
-  // ========== 头像 ==========
+  // ========== 头像（上传到云存储，存fileID以支持跨设备访问） ==========
   changeMyAvatar() {
+    var self = this;
     wx.chooseImage({
       count: 1, sizeType: ['compressed'], sourceType: ['album', 'camera'],
-      success: (res) => {
-        storage.setMyAvatar(res.tempFilePaths[0]);
-        this.setData({ myAvatar: res.tempFilePaths[0] });
-        wx.showToast({ title: '头像已更新', icon: 'none' });
+      success: function(res) {
+        var tempPath = res.tempFilePaths[0];
+        var ext = tempPath.split('.').pop() || 'jpg';
+        var cloudPath = 'avatars/my_' + Date.now() + '.' + ext;
+        wx.showLoading({ title: '上传中...' });
+        wx.cloud.uploadFile({
+          cloudPath: cloudPath,
+          filePath: tempPath,
+          success: function(uploadRes) {
+            storage.setMyAvatar(uploadRes.fileID);
+            self.setData({ myAvatar: uploadRes.fileID });
+            wx.showToast({ title: '头像已更新', icon: 'none' });
+          },
+          fail: function() {
+            wx.showToast({ title: '上传失败', icon: 'none' });
+          },
+          complete: function() {
+            wx.hideLoading();
+          }
+        });
       }
     });
   },
   changePartnerAvatar() {
+    var self = this;
     wx.chooseImage({
       count: 1, sizeType: ['compressed'], sourceType: ['album', 'camera'],
-      success: (res) => {
-        storage.setPartnerAvatar(res.tempFilePaths[0]);
-        this.setData({ partnerAvatar: res.tempFilePaths[0] });
-        wx.showToast({ title: '头像已更新', icon: 'none' });
+      success: function(res) {
+        var tempPath = res.tempFilePaths[0];
+        var ext = tempPath.split('.').pop() || 'jpg';
+        var cloudPath = 'avatars/partner_' + Date.now() + '.' + ext;
+        wx.showLoading({ title: '上传中...' });
+        wx.cloud.uploadFile({
+          cloudPath: cloudPath,
+          filePath: tempPath,
+          success: function(uploadRes) {
+            storage.setPartnerAvatar(uploadRes.fileID);
+            self.setData({ partnerAvatar: uploadRes.fileID });
+            wx.showToast({ title: '头像已更新', icon: 'none' });
+          },
+          fail: function() {
+            wx.showToast({ title: '上传失败', icon: 'none' });
+          },
+          complete: function() {
+            wx.hideLoading();
+          }
+        });
       }
     });
   },
@@ -278,6 +312,33 @@ Page({
           setTimeout(() => {
             wx.reLaunch({ url: '/pages/setup/setup' });
           }, 1000);
+        }
+      }
+    });
+  },
+
+  // ========== 查看邀请码 ==========
+  showInviteCode() {
+    var code = storage.getLastInviteCode();
+    if (!code) {
+      wx.showToast({ title: '邀请码未缓存', icon: 'none' });
+      return;
+    }
+    wx.showModal({
+      title: '💌 情侣空间邀请码',
+      content: code,
+      showCancel: true,
+      cancelText: '关闭',
+      confirmText: '复制',
+      confirmColor: '#FF6B8A',
+      success: function(res) {
+        if (res.confirm) {
+          wx.setClipboardData({
+            data: code,
+            success: function() {
+              wx.showToast({ title: '已复制', icon: 'none' });
+            }
+          });
         }
       }
     });

@@ -298,7 +298,7 @@
           <view class="req-status reject" wx:else>已拒绝</view>
         </view>
         <view class="req-actions flex-row" wx:if="{{item.status === 'pending'}}">
-          <input class="req-price-input" type="number" placeholder="定价" value="{{item._price}}" data-id="{{item.id}}" bindinput="onReqPrice" />
+          <input class="req-price-input" type="text" placeholder="定价（可负数）" value="{{item._price}}" data-id="{{item.id}}" bindinput="onReqPrice" />
           <view class="oa-btn confirm" bindtap="approveFoodRequest" data-item="{{item}}">上架</view>
           <view class="oa-btn reject" bindtap="rejectFoodRequest" data-id="{{item.id}}">拒绝</view>
         </view>
@@ -365,7 +365,7 @@
         </view>
         <view class="add-row flex-row">
           <text class="add-label">价格(币)</text>
-          <input class="add-input short" type="number" placeholder="5" value="{{foodForm.price}}" bindinput="onFoodFormPrice" />
+          <input class="add-input short" type="text" placeholder="5（可输入负数）" value="{{foodForm.price}}" bindinput="onFoodFormPrice" />
         </view>
         <view class="rr-btns flex-row">
           <view class="rr-btn cancel" bindtap="hideFoodModal">取消</view>

@@ -122,6 +122,11 @@
       <text>应用锁</text>
       <switch checked="{{lockEnabled}}" bindchange="onLockSwitch" color="#FF6B8A" />
     </view>
+    <!-- 仅开发者显示查看邀请码 -->
+    <view wx:if="{{isDev}}" class="setting-item flex-between" bindtap="showInviteCode">
+      <text>查看邀请码</text>
+      <text class="set-arrow">›</text>
+    </view>
     <!-- 仅开发者显示重新设置 -->
     <view wx:if="{{isDev}}" class="setting-item flex-between" bindtap="resetApp">
       <text>重新设置</text>
