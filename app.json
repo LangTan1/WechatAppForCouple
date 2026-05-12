@@ -11,7 +11,10 @@
     "pages/anniversary/anniversary",
     "pages/wishlist/wishlist",
     "pages/mood/mood",
-    "pages/achievement/achievement"
+    "pages/achievement/achievement",
+    "pages/angry/angry",
+    "pages/reflection/reflection",
+    "pages/learn/learn"
   ],
   "window": {
     "backgroundTextStyle": "light",
@@ -45,5 +48,13 @@
     ]
   },
   "style": "v2",
-  "sitemapLocation": "sitemap.json"
+  "sitemapLocation": "sitemap.json",
+  "permission": {
+    "scope.userFuzzyLocation": {
+      "desc": "用于获取您的位置以显示当地天气"
+    }
+  },
+  "requiredPrivateInfos": [
+    "getFuzzyLocation"
+  ]
 }

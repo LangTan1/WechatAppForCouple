@@ -44,6 +44,15 @@
         </view>
       </view>
 
+      <!-- 情侣互动的二级分类 -->
+      <view wx:if="{{currentTopTab === 'other'}}" class="category-tabs flex-row">
+        <view wx:for="{{otherCategories}}" wx:key="key"
+          class="cat-tab flex-center {{currentOtherTab === item.key ? 'active' : ''}}"
+          data-key="{{item.key}}" bindtap="switchOtherTab">
+          <text>{{item.icon}} {{item.name}}</text>
+        </view>
+      </view>
+
       <view wx:if="{{currentTopTab === 'food'}}" class="random-bar">
         <view class="random-btn flex-center" bindtap="randomPick">
           <text class="random-icon">🎲</text>
@@ -207,6 +216,14 @@
         <view wx:for="{{categories}}" wx:key="key"
           class="cat-tab flex-center {{currentTab === item.key ? 'active' : ''}}"
           data-key="{{item.key}}" bindtap="switchTab">
+          <text>{{item.icon}} {{item.name}}</text>
+        </view>
+      </view>
+      <!-- 情侣互动的二级分类 -->
+      <view wx:if="{{currentTopTab === 'other'}}" class="category-tabs flex-row">
+        <view wx:for="{{otherCategories}}" wx:key="key"
+          class="cat-tab flex-center {{currentOtherTab === item.key ? 'active' : ''}}"
+          data-key="{{item.key}}" bindtap="switchOtherTab">
           <text>{{item.icon}} {{item.name}}</text>
         </view>
       </view>

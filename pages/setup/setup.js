@@ -154,32 +154,6 @@ Page({
     storage.setLockEnabled(lockEnabled);
     if (lockEnabled) storage.set(storage.STORAGE_KEYS.LOCK_PIN, lockPin);
 
-    // 初始化默认商品
-    if (storage.getMenuItems().length === 0) {
-      storage.setMenuItems([
-        // 水果
-        { id: 1001, name: '苹果', emoji: '🍎', topCategory: 'fruit', category: 'fruit', price: 3, published: true, addedBy: 'dev' },
-        { id: 1002, name: '香蕉', emoji: '🍌', topCategory: 'fruit', category: 'fruit', price: 3, published: true, addedBy: 'dev' },
-        { id: 1003, name: '葡萄', emoji: '🍇', topCategory: 'fruit', category: 'fruit', price: 4, published: true, addedBy: 'dev' },
-        { id: 1004, name: '西瓜', emoji: '🍉', topCategory: 'fruit', category: 'fruit', price: 5, published: true, addedBy: 'dev' },
-        { id: 1005, name: '草莓', emoji: '🍓', topCategory: 'fruit', category: 'fruit', price: 6, published: true, addedBy: 'dev' },
-        { id: 1006, name: '樱桃', emoji: '🍒', topCategory: 'fruit', category: 'fruit', price: 6, published: true, addedBy: 'dev' },
-        { id: 1007, name: '桃子', emoji: '🍑', topCategory: 'fruit', category: 'fruit', price: 4, published: true, addedBy: 'dev' },
-        { id: 1008, name: '芒果', emoji: '🥭', topCategory: 'fruit', category: 'fruit', price: 5, published: true, addedBy: 'dev' },
-        { id: 1009, name: '菠萝', emoji: '🍍', topCategory: 'fruit', category: 'fruit', price: 5, published: true, addedBy: 'dev' },
-        { id: 1010, name: '橙子', emoji: '🍊', topCategory: 'fruit', category: 'fruit', price: 3, published: true, addedBy: 'dev' },
-        // 其他（情侣调情商品）
-        { id: 2001, name: '亲亲一次', emoji: '💋', topCategory: 'other', category: 'other', price: 10, published: true, addedBy: 'dev' },
-        { id: 2002, name: '抱抱一次', emoji: '🤗', topCategory: 'other', category: 'other', price: 8, published: true, addedBy: 'dev' },
-        { id: 2003, name: '按摩服务', emoji: '💆', topCategory: 'other', category: 'other', price: 15, published: true, addedBy: 'dev' },
-        { id: 2004, name: '陪看电影', emoji: '🎬', topCategory: 'other', category: 'other', price: 12, published: true, addedBy: 'dev' },
-        { id: 2005, name: '做饭一次', emoji: '🍳', topCategory: 'other', category: 'other', price: 20, published: true, addedBy: 'dev' },
-        { id: 2006, name: '洗碗一次', emoji: '🍽️', topCategory: 'other', category: 'other', price: 10, published: true, addedBy: 'dev' },
-        { id: 2007, name: '说爱你', emoji: '💕', topCategory: 'other', category: 'other', price: 5, published: true, addedBy: 'dev' },
-        { id: 2008, name: '陪逛街', emoji: '🛍️', topCategory: 'other', category: 'other', price: 15, published: true, addedBy: 'dev' },
-      ]);
-    }
-
     storage.setSetupDone();
     storage.setCurrentRole('dev');
 
@@ -336,6 +310,7 @@ Page({
     try {
       const result = await storage.bindCouple(code, name, gender);
       if (result.success) {
+        storage.setSetupDone();
         storage.setCurrentRole('user');
         wx.showToast({ title: '绑定成功 💕', icon: 'none', duration: 1500 });
         setTimeout(() => this.goMain(), 1500);
@@ -376,6 +351,7 @@ Page({
       // 使用保存的名字和性别重新绑定
       var result = await storage.bindCouple(code, storage.getMyName(), storage.getMyGender());
       if (result.success) {
+        storage.setSetupDone();
         storage.setCurrentRole('user');
         wx.showToast({ title: '恢复成功 💕', icon: 'none', duration: 1500 });
         setTimeout(() => this.goMain(), 1500);
@@ -384,7 +360,7 @@ Page({
       }
     } catch (e) {
       console.error('恢复绑定失败:', e);
-      this.setData({ rebindError: '恢复失败，请重试', rebindLoading: false });
+      this.setData({ rebindError: '恢复失败，请重试', bindLoading: false });
     }
   },
 

@@ -44,6 +44,39 @@
       </view>
       <text class="re-arrow">›</text>
     </view>
+
+    <view class="record-entry flex-between" bindtap="goAngry">
+      <view class="re-left flex-row">
+        <view class="re-icon angry-bg">😤</view>
+        <view>
+          <view class="re-title">气气本</view>
+          <view class="re-sub">记录生气的瞬间，发泄完就翻篇～</view>
+        </view>
+      </view>
+      <text class="re-arrow">›</text>
+    </view>
+
+    <view class="record-entry flex-between" bindtap="goReflection">
+      <view class="re-left flex-row">
+        <view class="re-icon reflection-bg">🤔</view>
+        <view>
+          <view class="re-title">醒醒贴</view>
+          <view class="re-sub">吵架后反省自己，下次不再犯</view>
+        </view>
+      </view>
+      <text class="re-arrow">›</text>
+    </view>
+
+    <view class="record-entry flex-between" bindtap="goLearn">
+      <view class="re-left flex-row">
+        <view class="re-icon learn-bg">📚</view>
+        <view>
+          <view class="re-title">学学好</view>
+          <view class="re-sub">看到对方好习惯，记下来跟着学</view>
+        </view>
+      </view>
+      <text class="re-arrow">›</text>
+    </view>
   </view>
 
   <!-- 快捷入口 -->

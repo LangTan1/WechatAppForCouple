@@ -16,5 +16,14 @@ Page({
   },
   goWishlist() {
     wx.navigateTo({ url: '/pages/wishlist/wishlist' });
+  },
+  goAngry() {
+    wx.navigateTo({ url: '/pages/angry/angry' });
+  },
+  goReflection() {
+    wx.navigateTo({ url: '/pages/reflection/reflection' });
+  },
+  goLearn() {
+    wx.navigateTo({ url: '/pages/learn/learn' });
   }
 });

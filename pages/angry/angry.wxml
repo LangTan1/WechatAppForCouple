@@ -1,0 +1,59 @@
+<view class="page">
+  <view class="header">
+    <view class="header-title">😤 气气本</view>
+    <view class="header-desc">记录生气的瞬间，发泄完就翻篇～</view>
+  </view>
+
+  <view class="add-btn" bindtap="showAdd">
+    <text class="add-icon">+</text>
+    <text class="add-text">记录一下</text>
+  </view>
+
+  <view class="list" wx:if="{{items.length > 0}}">
+    <view class="item" wx:for="{{items}}" wx:key="id">
+      <view class="item-header flex-between">
+        <view class="item-event">😤 {{item.event}}</view>
+        <view class="item-delete" bindtap="deleteItem" data-id="{{item.id}}">✕</view>
+      </view>
+      <view class="item-meta">
+        <text class="item-name">{{item.name}}</text>
+        <text class="item-date">📅 {{item.eventDate}}</text>
+      </view>
+      <view class="item-content">{{item.content}}</view>
+      <view class="item-footer">
+        <text class="item-record-time">记录于 {{item.recordTime}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty" wx:else>
+    <view class="empty-icon">😤</view>
+    <view class="empty-text">还没有记录哦</view>
+    <view class="empty-desc">生气了就来发泄一下吧</view>
+  </view>
+
+  <!-- 添加弹窗 -->
+  <view class="modal-mask" wx:if="{{showModal}}" catchtap="noop">
+    <view class="modal" catchtap="noop">
+      <view class="modal-title">😤 记录一下</view>
+      <view class="form-group">
+        <view class="form-label">因为什么事情？</view>
+        <input class="form-input" placeholder="例如：忘记了纪念日" value="{{newEvent}}" bindinput="onEventInput" />
+      </view>
+      <view class="form-group">
+        <view class="form-label">什么时候发生的？</view>
+        <picker mode="date" value="{{newEventDate}}" bindchange="onDateChange">
+          <view class="form-input picker">{{newEventDate || '选择日期'}}</view>
+        </picker>
+      </view>
+      <view class="form-group">
+        <view class="form-label">你的感受</view>
+        <textarea class="form-textarea" placeholder="写写你的感受，发泄出来就好了..." value="{{newContent}}" bindinput="onContentInput" maxlength="500" />
+      </view>
+      <view class="modal-btns flex-row">
+        <view class="modal-btn cancel" bindtap="hideModal">取消</view>
+        <view class="modal-btn confirm" bindtap="addItem">发泄！</view>
+      </view>
+    </view>
+  </view>
+</view>

@@ -33,6 +33,9 @@
 .whisper-bg  { background: #FFF5F0; }
 .album-bg    { background: #F0F5FF; }
 .mood-bg     { background: #FFF0FF; }
+.angry-bg    { background: #FFF0F0; }
+.reflection-bg { background: #F0FFF0; }
+.learn-bg    { background: #FFFFF0; }
 
 .re-title {
   font-size: 30rpx;

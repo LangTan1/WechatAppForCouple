@@ -8,8 +8,8 @@
 - 本地存储（wx.Storage）+ 微信云开发（NoSQL数据库同步）
 - 基础库 3.15.2，`es6: false`（关闭Babel转译避免babel-helper缺失）
 - `lazyCodeLoading` 已移除（与Babel转译产物冲突导致defineProperty报错）
-- 禁止使用 wx.request / wx.getLocation / wx.getFuzzyLocation（均无权限/会超时）
-- 天气使用纯本地季节模拟（utils/weather.js），无网络调用
+- 天气使用和风天气API（utils/weather.js），需配置API Key和API Host
+- 已申请 wx.getFuzzyLocation 权限用于获取位置
 
 ## 目录结构
 ```
@@ -34,7 +34,10 @@
     ├── anniversary/           # 纪念日
     ├── wishlist/              # 愿望清单
     ├── mood/                  # 每日心情打卡
-    └── achievement/           # 恋爱成就（25个成就·4等级）
+    ├── achievement/           # 恋爱成就（25个成就·4等级）
+    ├── angry/                 # 气气本（记录生气瞬间）
+    ├── reflection/            # 醒醒贴（自我反省）
+    └── learn/                 # 学学好（记录好习惯）
 ```
 
 ## 双角色体系
@@ -95,12 +98,22 @@
 
 ## 商城系统（原菜单）
 ### 三级分类结构
-- 一级分类：🍽️食品 / 🍎水果 / 🎁其他
+- 一级分类：🍽️食品 / 🍎水果 / 💑情侣互动
 - 食品二级分类：正餐 / 甜品 / 小吃
-- 水果/其他：直接显示商品列表
+- 情侣互动二级分类：居家服务 / 约会活动 / 甜蜜亲密
+- 水果：直接显示商品列表
+
+### 默认商品（始终显示，删除后自动恢复）
+- 正餐（10种）：家常菜、火锅、烤肉、西餐、日料、披萨、汉堡、面条、炒饭、麻辣烫
+- 甜品（5种）：蛋糕、奶茶、冰淇淋、布丁、巧克力
+- 小吃（5种）：炸鸡、薯条、烤串、关东煮、糖葫芦
+- 水果（10种）：苹果、香蕉、葡萄、西瓜、草莓、樱桃、桃子、芒果、菠萝、橙子
+- 居家服务（5种）：做饭、洗碗、打扫卫生、洗衣服、按摩服务
+- 约会活动（5种）：陪看电影、陪逛街、陪散步、陪玩游戏、陪旅行
+- 甜蜜亲密（5种）：亲亲、抱抱、说爱你、撒娇、哄你睡觉
 
 ### 使用者模式
-- 一级Tab切换（食品/水果/其他），食品有二级Tab
+- 一级Tab切换（食品/水果/情侣互动），食品和情侣互动有二级Tab
 - 点餐扣币，帮我决定（随机选择，仅食品）
 - 许愿功能（所有分类可用）
 - 负价格商品：不扣币，提交订单给开发者，确认后发放爱心币
@@ -111,7 +124,6 @@
 - 价格输入使用 `type="text"` 键盘（允许输入负号 `-`）
 - Tab「订单队列」：接受→标记完成。负价格订单显示"确认发放💖"
 - Tab「请求处理」：食物许愿+充值请求
-- 初始化预设：10种水果+8种情侣互动商品
 
 ### 订单红点
 - 开发者：新订单数(pending)
@@ -159,26 +171,27 @@
 - 成就定义在 `pages/achievement/achievement.js`，运行时状态存storage
 - `unlockAchievement(id)` 幂等解锁
 
-## Storage Key 清单（35个）
+## Storage Key 清单（38个）
 角色/身份：`setup_done`, `dev_key`, `user_key`, `current_role`, `last_role`, `lock_enabled`, `lock_pin`
 情侣信息：`together_date`, `my_name`, `partner_name`, `my_avatar`, `partner_avatar`, `my_gender`, `partner_gender`, `boy_coins`, `girl_coins`
-功能数据：`custom_diaries`, `custom_whispers`, `custom_wishes`, `custom_anniversaries`, `custom_menu_items`, `custom_album`, `custom_moods`, `custom_achievements`
+功能数据：`custom_diaries`, `custom_whispers`, `custom_wishes`, `custom_anniversaries`, `custom_menu_items`, `custom_album`, `custom_moods`, `custom_achievements`, `custom_angry`, `custom_reflection`, `custom_learn`
 订单系统：`order_queue`, `food_requests`, `coin_requests`, `order_total_count`, `coin_transactions`
 云同步：`couple_doc_id`
 其他：`last_quote_date`, `last_quote_index`, `weather_cache`, `last_view_timestamps`, `last_invite_code`
 
 ## 云字段映射
-静态映射（CLOUD_FIELDS）：`together_date`→`togetherDate`, `boy_coins`→`devCoins`, `girl_coins`→`userCoins`, `custom_menu_items`→`menuItems`, `custom_diaries`→`diaries`, `custom_whispers`→`whispers`, `custom_wishes`→`wishes`, `custom_anniversaries`→`anniversaries`, `custom_album`→`albums`, `custom_moods`→`moods`, `custom_achievements`→`achievements`, `order_queue`→`orderQueue`, `food_requests`→`foodRequests`, `coin_requests`→`coinRequests`, `order_total_count`→`orderTotalCount`, `coin_transactions`→`coinTransactions`
+静态映射（CLOUD_FIELDS）：`together_date`→`togetherDate`, `boy_coins`→`devCoins`, `girl_coins`→`userCoins`, `custom_menu_items`→`menuItems`, `custom_diaries`→`diaries`, `custom_whispers`→`whispers`, `custom_wishes`→`wishes`, `custom_anniversaries`→`anniversaries`, `custom_album`→`albums`, `custom_moods`→`moods`, `custom_achievements`→`achievements`, `order_queue`→`orderQueue`, `food_requests`→`foodRequests`, `coin_requests`→`coinRequests`, `order_total_count`→`orderTotalCount`, `coin_transactions`→`coinTransactions`, `custom_angry`→`angry`, `custom_reflection`→`reflection`, `custom_learn`→`learn`
 角色感知映射（`_getCloudFieldFor`）：`my_name`↔`devName`/`userName`, `partner_name`↔`userName`/`devName`, `my_avatar`↔`devAvatar`/`userAvatar`, `my_gender`↔`devGender`/`userGender`
 
 ## 注意事项
 - 微信隐私限制：无法通过 openid 读取对方的微信昵称/头像，只能靠用户自己填写的名字识别身份
 - 所有弹窗使用 `catchtap="noop"` + JS中 `noop(){}` 阻止穿透
 - storage.js 是唯一数据源
-- 不要添加任何网络请求API调用（除云开发API）
 - 成就定义常量在 achievement.js 中，不存storage
 - 天气缓存30分钟，但名字始终读最新值
 - 悄悄话/首页/商城有自动轮询，onHide/onUnload时停止
+- 实时天气使用和风天气API，需在 `utils/weather.js` 中配置 `QWEATHER_KEY` 和 `QWEATHER_HOST`
+- app.json 中需声明 `wx.getFuzzyLocation` 权限和 `requiredPrivateInfos`
 
 ## 断线恢复机制
 ### 根因

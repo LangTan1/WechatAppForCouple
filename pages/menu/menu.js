@@ -7,7 +7,7 @@ Page({
     topCategories: [
       { key: 'food', name: '食品', icon: '🍽️' },
       { key: 'fruit', name: '水果', icon: '🍎' },
-      { key: 'other', name: '其他', icon: '🎁' },
+      { key: 'other', name: '情侣互动', icon: '💑' },
     ],
     currentTopTab: 'food',
     // 食品下的二级分类
@@ -19,6 +19,15 @@ Page({
     categoryNames: ['正餐', '甜品', '小吃'],
     categoryKeys: ['meal', 'drink', 'snack'],
     currentTab: 'meal',
+    // 情侣互动下的二级分类
+    otherCategories: [
+      { key: 'housework', name: '居家服务', icon: '🏠' },
+      { key: 'date', name: '约会活动', icon: '🎬' },
+      { key: 'intimate', name: '甜蜜亲密', icon: '💕' },
+    ],
+    otherCategoryNames: ['居家服务', '约会活动', '甜蜜亲密'],
+    otherCategoryKeys: ['housework', 'date', 'intimate'],
+    currentOtherTab: 'housework',
     myCoins: 0,
 
     // ===== 使用者 =====
@@ -147,8 +156,79 @@ Page({
   },
 
   // ==================== 使用者 ====================
-  loadUserData() {
+  // 确保默认商品存在
+  ensureDefaultItems() {
     const allItems = storage.getMenuItems();
+    const defaultItems = [
+      // 正餐
+      { id: 1, name: '家常菜', emoji: '🥘', topCategory: 'food', category: 'meal', price: 25, published: true, addedBy: 'dev' },
+      { id: 2, name: '火锅', emoji: '🍲', topCategory: 'food', category: 'meal', price: 50, published: true, addedBy: 'dev' },
+      { id: 3, name: '烤肉', emoji: '🥩', topCategory: 'food', category: 'meal', price: 45, published: true, addedBy: 'dev' },
+      { id: 4, name: '西餐', emoji: '🍝', topCategory: 'food', category: 'meal', price: 40, published: true, addedBy: 'dev' },
+      { id: 5, name: '日料', emoji: '🍣', topCategory: 'food', category: 'meal', price: 55, published: true, addedBy: 'dev' },
+      { id: 6, name: '披萨', emoji: '🍕', topCategory: 'food', category: 'meal', price: 30, published: true, addedBy: 'dev' },
+      { id: 7, name: '汉堡', emoji: '🍔', topCategory: 'food', category: 'meal', price: 20, published: true, addedBy: 'dev' },
+      { id: 8, name: '面条', emoji: '🍜', topCategory: 'food', category: 'meal', price: 15, published: true, addedBy: 'dev' },
+      { id: 9, name: '炒饭', emoji: '🍛', topCategory: 'food', category: 'meal', price: 12, published: true, addedBy: 'dev' },
+      { id: 10, name: '麻辣烫', emoji: '🌶️', topCategory: 'food', category: 'meal', price: 20, published: true, addedBy: 'dev' },
+      // 甜品
+      { id: 101, name: '蛋糕', emoji: '🎂', topCategory: 'food', category: 'drink', price: 25, published: true, addedBy: 'dev' },
+      { id: 102, name: '奶茶', emoji: '🧋', topCategory: 'food', category: 'drink', price: 12, published: true, addedBy: 'dev' },
+      { id: 103, name: '冰淇淋', emoji: '🍦', topCategory: 'food', category: 'drink', price: 10, published: true, addedBy: 'dev' },
+      { id: 104, name: '布丁', emoji: '🍮', topCategory: 'food', category: 'drink', price: 8, published: true, addedBy: 'dev' },
+      { id: 105, name: '巧克力', emoji: '🍫', topCategory: 'food', category: 'drink', price: 15, published: true, addedBy: 'dev' },
+      // 小吃
+      { id: 201, name: '炸鸡', emoji: '🍗', topCategory: 'food', category: 'snack', price: 18, published: true, addedBy: 'dev' },
+      { id: 202, name: '薯条', emoji: '🍟', topCategory: 'food', category: 'snack', price: 10, published: true, addedBy: 'dev' },
+      { id: 203, name: '烤串', emoji: '🍢', topCategory: 'food', category: 'snack', price: 15, published: true, addedBy: 'dev' },
+      { id: 204, name: '关东煮', emoji: '🥘', topCategory: 'food', category: 'snack', price: 12, published: true, addedBy: 'dev' },
+      { id: 205, name: '糖葫芦', emoji: '🍡', topCategory: 'food', category: 'snack', price: 8, published: true, addedBy: 'dev' },
+      // 水果
+      { id: 1001, name: '苹果', emoji: '🍎', topCategory: 'fruit', category: 'fruit', price: 3, published: true, addedBy: 'dev' },
+      { id: 1002, name: '香蕉', emoji: '🍌', topCategory: 'fruit', category: 'fruit', price: 3, published: true, addedBy: 'dev' },
+      { id: 1003, name: '葡萄', emoji: '🍇', topCategory: 'fruit', category: 'fruit', price: 4, published: true, addedBy: 'dev' },
+      { id: 1004, name: '西瓜', emoji: '🍉', topCategory: 'fruit', category: 'fruit', price: 5, published: true, addedBy: 'dev' },
+      { id: 1005, name: '草莓', emoji: '🍓', topCategory: 'fruit', category: 'fruit', price: 6, published: true, addedBy: 'dev' },
+      { id: 1006, name: '樱桃', emoji: '🍒', topCategory: 'fruit', category: 'fruit', price: 6, published: true, addedBy: 'dev' },
+      { id: 1007, name: '桃子', emoji: '🍑', topCategory: 'fruit', category: 'fruit', price: 4, published: true, addedBy: 'dev' },
+      { id: 1008, name: '芒果', emoji: '🥭', topCategory: 'fruit', category: 'fruit', price: 5, published: true, addedBy: 'dev' },
+      { id: 1009, name: '菠萝', emoji: '🍍', topCategory: 'fruit', category: 'fruit', price: 5, published: true, addedBy: 'dev' },
+      { id: 1010, name: '橙子', emoji: '🍊', topCategory: 'fruit', category: 'fruit', price: 3, published: true, addedBy: 'dev' },
+      // 情侣互动 - 居家服务
+      { id: 2001, name: '做饭一次', emoji: '🍳', topCategory: 'other', category: 'housework', price: 20, published: true, addedBy: 'dev' },
+      { id: 2002, name: '洗碗一次', emoji: '🍽️', topCategory: 'other', category: 'housework', price: 10, published: true, addedBy: 'dev' },
+      { id: 2003, name: '打扫卫生', emoji: '🧹', topCategory: 'other', category: 'housework', price: 15, published: true, addedBy: 'dev' },
+      { id: 2004, name: '洗衣服', emoji: '👕', topCategory: 'other', category: 'housework', price: 10, published: true, addedBy: 'dev' },
+      { id: 2005, name: '按摩服务', emoji: '💆', topCategory: 'other', category: 'housework', price: 15, published: true, addedBy: 'dev' },
+      // 情侣互动 - 约会活动
+      { id: 2011, name: '陪看电影', emoji: '🎬', topCategory: 'other', category: 'date', price: 12, published: true, addedBy: 'dev' },
+      { id: 2012, name: '陪逛街', emoji: '🛍️', topCategory: 'other', category: 'date', price: 15, published: true, addedBy: 'dev' },
+      { id: 2013, name: '陪散步', emoji: '🚶', topCategory: 'other', category: 'date', price: 8, published: true, addedBy: 'dev' },
+      { id: 2014, name: '陪玩游戏', emoji: '🎮', topCategory: 'other', category: 'date', price: 10, published: true, addedBy: 'dev' },
+      { id: 2015, name: '陪旅行', emoji: '✈️', topCategory: 'other', category: 'date', price: 30, published: true, addedBy: 'dev' },
+      // 情侣互动 - 甜蜜亲密
+      { id: 2021, name: '亲亲一次', emoji: '💋', topCategory: 'other', category: 'intimate', price: 10, published: true, addedBy: 'dev' },
+      { id: 2022, name: '抱抱一次', emoji: '🤗', topCategory: 'other', category: 'intimate', price: 8, published: true, addedBy: 'dev' },
+      { id: 2023, name: '说爱你', emoji: '💕', topCategory: 'other', category: 'intimate', price: 5, published: true, addedBy: 'dev' },
+      { id: 2024, name: '撒娇一次', emoji: '🥺', topCategory: 'other', category: 'intimate', price: 12, published: true, addedBy: 'dev' },
+      { id: 2025, name: '哄你睡觉', emoji: '😴', topCategory: 'other', category: 'intimate', price: 15, published: true, addedBy: 'dev' },
+    ];
+
+    // 检查哪些默认商品需要添加
+    const existingIds = allItems.map(item => item.id);
+    const missingDefaults = defaultItems.filter(item => !existingIds.includes(item.id));
+
+    if (missingDefaults.length > 0) {
+      const updatedItems = [...allItems, ...missingDefaults];
+      storage.setMenuItems(updatedItems);
+      return updatedItems;
+    }
+
+    return allItems;
+  },
+
+  loadUserData() {
+    const allItems = this.ensureDefaultItems();
     const published = allItems.filter(item => item.published !== false);
     const orders = storage.getOrderQueue();
     // 显示所有订单（包括已拒绝，以便用户看到拒绝原因）
@@ -167,11 +247,15 @@ Page({
   filterUserTab() {
     const topTab = this.data.currentTopTab;
     const subTab = this.data.currentTab;
+    const otherSubTab = this.data.currentOtherTab;
     let items;
     if (topTab === 'food') {
       items = this.data.allFoodItems.filter(item => item.category === subTab);
+    } else if (topTab === 'other') {
+      // 情侣互动：按 topCategory 和 category 过滤
+      items = this.data.allFoodItems.filter(item => item.topCategory === topTab && item.category === otherSubTab);
     } else {
-      // 水果、其他：按 topCategory 过滤
+      // 水果：按 topCategory 过滤
       items = this.data.allFoodItems.filter(item => item.topCategory === topTab);
     }
     this.setData({ foodItems: items });
@@ -184,6 +268,10 @@ Page({
     if (key === 'food') {
       this.setData({ currentTab: 'meal' });
     }
+    // 切换一级分类时，情侣互动默认选中第一个子分类
+    if (key === 'other') {
+      this.setData({ currentOtherTab: 'housework' });
+    }
     if (this.data.isDev) {
       this.filterDevTab(this.data.currentTab);
     } else {
@@ -194,6 +282,16 @@ Page({
   switchTab(e) {
     const key = e.currentTarget.dataset.key;
     this.setData({ currentTab: key });
+    if (this.data.isDev) {
+      this.filterDevTab(key);
+    } else {
+      this.filterUserTab();
+    }
+  },
+
+  switchOtherTab(e) {
+    const key = e.currentTarget.dataset.key;
+    this.setData({ currentOtherTab: key });
     if (this.data.isDev) {
       this.filterDevTab(key);
     } else {
@@ -293,7 +391,7 @@ Page({
 
   // ==================== 开发者 ====================
   loadDevData() {
-    const allItems = storage.getMenuItems();
+    const allItems = this.ensureDefaultItems();
     const orders = storage.getOrderQueue();
     const pendingOrders = orders.filter(o => o.status !== 'done' && o.status !== 'rejected');
     const doneOrders = orders.filter(o => o.status === 'done');
@@ -319,9 +417,13 @@ Page({
   // 开发者分类筛选
   filterDevTab(key) {
     const topTab = this.data.currentTopTab;
+    const otherSubTab = this.data.currentOtherTab;
     let items;
     if (topTab === 'food') {
       items = this.data.allFoodItems.filter(item => item.category === key);
+    } else if (topTab === 'other') {
+      // 情侣互动：按 topCategory 和 category 过滤
+      items = this.data.allFoodItems.filter(item => item.topCategory === topTab && item.category === otherSubTab);
     } else {
       items = this.data.allFoodItems.filter(item => item.topCategory === topTab);
     }

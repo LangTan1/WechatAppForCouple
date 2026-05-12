@@ -23,7 +23,10 @@ const CLOUD_FIELDS = {
   'food_requests': 'foodRequests',
   'coin_requests': 'coinRequests',
   'order_total_count': 'orderTotalCount',
-  'coin_transactions': 'coinTransactions'
+  'coin_transactions': 'coinTransactions',
+  'custom_angry': 'angry',
+  'custom_reflection': 'reflection',
+  'custom_learn': 'learn'
 };
 
 // 角色感知的云字段名
@@ -76,7 +79,10 @@ const STORAGE_KEYS = {
   ACHIEVEMENTS: 'custom_achievements',
   ORDER_TOTAL_COUNT: 'order_total_count',
   COIN_TRANSACTIONS: 'coin_transactions',
-  LAST_VIEW_TIMESTAMPS: 'last_view_timestamps'
+  LAST_VIEW_TIMESTAMPS: 'last_view_timestamps',
+  ANGRY: 'custom_angry',
+  REFLECTION: 'custom_reflection',
+  LEARN: 'custom_learn'
 };
 
 function get(key, defaultValue) {
@@ -323,6 +329,18 @@ function setLastQuoteDate(date) { set(STORAGE_KEYS.LAST_QUOTE_DATE, date); }
 function getLastQuoteIndex() { return get(STORAGE_KEYS.LAST_QUOTE_INDEX, -1); }
 function setLastQuoteIndex(idx) { set(STORAGE_KEYS.LAST_QUOTE_INDEX, idx); }
 
+// ---- 气气本 ----
+function getAngry() { return get(STORAGE_KEYS.ANGRY, []); }
+function setAngry(list) { set(STORAGE_KEYS.ANGRY, list); }
+
+// ---- 醒醒贴 ----
+function getReflection() { return get(STORAGE_KEYS.REFLECTION, []); }
+function setReflection(list) { set(STORAGE_KEYS.REFLECTION, list); }
+
+// ---- 学学好 ----
+function getLearn() { return get(STORAGE_KEYS.LEARN, []); }
+function setLearn(list) { set(STORAGE_KEYS.LEARN, list); }
+
 // ---- 访问控制 ----
 function isSetupDone() { return get(STORAGE_KEYS.SETUP_DONE, false); }
 function setSetupDone() { set(STORAGE_KEYS.SETUP_DONE, true); }
@@ -488,7 +506,10 @@ async function createCouple(openid, info) {
     orderQueue: getOrderQueue(),
     foodRequests: getFoodRequests(),
     coinRequests: getCoinRequests(),
-    orderTotalCount: getOrderTotalCount()
+    orderTotalCount: getOrderTotalCount(),
+    angry: getAngry(),
+    reflection: getReflection(),
+    learn: getLearn()
   };
 
   const res = await wx.cloud.callFunction({
@@ -502,6 +523,8 @@ async function createCouple(openid, info) {
 
   _coupleDocId = res.result.docId;
   set('couple_doc_id', _coupleDocId);
+  // 保存邀请码到本地，用于查看邀请码功能
+  setLastInviteCode(inviteCode);
   return { docId: res.result.docId, inviteCode: inviteCode };
 }
 
@@ -551,6 +574,7 @@ async function bindCouple(inviteCode, userName, userGender) {
     _syncingFromCloud = true;
     set(STORAGE_KEYS.MY_NAME, userName);
     if (couple.devName) set(STORAGE_KEYS.PARTNER_NAME, couple.devName);
+    if (couple.devAvatar) set(STORAGE_KEYS.PARTNER_AVATAR, couple.devAvatar);
     if (userGender) set(STORAGE_KEYS.MY_GENDER, userGender);
     if (couple.devGender) set(STORAGE_KEYS.PARTNER_GENDER, couple.devGender);
     _syncingFromCloud = false;
@@ -653,6 +677,9 @@ function _syncCloudToLocal(data) {
   if (data.coinRequests) set(STORAGE_KEYS.COIN_REQUESTS, data.coinRequests);
   if (data.orderTotalCount !== undefined) set(STORAGE_KEYS.ORDER_TOTAL_COUNT, data.orderTotalCount);
   if (data.coinTransactions) set(STORAGE_KEYS.COIN_TRANSACTIONS, data.coinTransactions);
+  if (data.angry) set(STORAGE_KEYS.ANGRY, data.angry);
+  if (data.reflection) set(STORAGE_KEYS.REFLECTION, data.reflection);
+  if (data.learn) set(STORAGE_KEYS.LEARN, data.learn);
   _syncingFromCloud = false;
 }
 
@@ -748,5 +775,6 @@ module.exports = {
   getLastViewTimestamps, updateLastView,
   getCoupleDocId, generateInviteCode, createCouple, bindCouple,
   loadFromCloud, saveToCloud, saveBatchToCloud, unbindCouple,
-  getLastInviteCode, setLastInviteCode, findCoupleByOpenid
+  getLastInviteCode, setLastInviteCode, findCoupleByOpenid,
+  getAngry, setAngry, getReflection, setReflection, getLearn, setLearn
 };
