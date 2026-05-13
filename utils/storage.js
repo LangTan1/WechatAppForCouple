@@ -26,7 +26,9 @@ const CLOUD_FIELDS = {
   'coin_transactions': 'coinTransactions',
   'custom_angry': 'angry',
   'custom_reflection': 'reflection',
-  'custom_learn': 'learn'
+  'custom_learn': 'learn',
+  'custom_sweet': 'sweet',
+  'custom_avoid': 'avoid'
 };
 
 // 角色感知的云字段名
@@ -82,7 +84,9 @@ const STORAGE_KEYS = {
   LAST_VIEW_TIMESTAMPS: 'last_view_timestamps',
   ANGRY: 'custom_angry',
   REFLECTION: 'custom_reflection',
-  LEARN: 'custom_learn'
+  LEARN: 'custom_learn',
+  SWEET: 'custom_sweet',
+  AVOID: 'custom_avoid'
 };
 
 function get(key, defaultValue) {
@@ -102,7 +106,12 @@ function set(key, value) {
     if (!_syncingFromCloud && key !== 'my_name' && key !== 'partner_name'
         && key !== 'my_avatar' && key !== 'partner_avatar'
         && key !== 'my_gender' && key !== 'partner_gender' && CLOUD_FIELDS[key]) {
-      saveToCloud(key, value).catch(function(e) { console.error('Auto sync error:', e); });
+      console.log('[set] auto-sync triggered for key:', key, '→ cloud field:', CLOUD_FIELDS[key]);
+      saveToCloud(key, value).then(function() {
+        console.log('[set] sync OK for key:', key);
+      }).catch(function(e) {
+        console.error('[set] sync FAIL for key:', key, e);
+      });
     }
   } catch (e) {
     console.error('Storage set error:', e);
@@ -341,6 +350,14 @@ function setReflection(list) { set(STORAGE_KEYS.REFLECTION, list); }
 function getLearn() { return get(STORAGE_KEYS.LEARN, []); }
 function setLearn(list) { set(STORAGE_KEYS.LEARN, list); }
 
+// ---- 甜甜记 ----
+function getSweet() { return get(STORAGE_KEYS.SWEET, []); }
+function setSweet(list) { set(STORAGE_KEYS.SWEET, list); }
+
+// ---- 避雷贴 ----
+function getAvoid() { return get(STORAGE_KEYS.AVOID, []); }
+function setAvoid(list) { set(STORAGE_KEYS.AVOID, list); }
+
 // ---- 访问控制 ----
 function isSetupDone() { return get(STORAGE_KEYS.SETUP_DONE, false); }
 function setSetupDone() { set(STORAGE_KEYS.SETUP_DONE, true); }
@@ -509,7 +526,9 @@ async function createCouple(openid, info) {
     orderTotalCount: getOrderTotalCount(),
     angry: getAngry(),
     reflection: getReflection(),
-    learn: getLearn()
+    learn: getLearn(),
+    sweet: getSweet(),
+    avoid: getAvoid()
   };
 
   const res = await wx.cloud.callFunction({
@@ -544,6 +563,22 @@ async function findCoupleByOpenid(openid) {
   return null;
 }
 
+// 通过 openid 查找所有情侣文档（开发者找回旧空间用）
+async function findAllCouplesByOpenid() {
+  try {
+    const res = await wx.cloud.callFunction({
+      name: 'coupleOps',
+      data: { action: 'findAllCouplesByOpenid' }
+    });
+    if (res.result && res.result.success) {
+      return res.result.couples || [];
+    }
+  } catch (e) {
+    console.error('findAllCouplesByOpenid error:', e);
+  }
+  return [];
+}
+
 // 绑定对方（加入者调用）- 通过云函数操作，绕过安全规则
 async function bindCouple(inviteCode, userName, userGender) {
   const res = await wx.cloud.callFunction({
@@ -569,14 +604,11 @@ async function bindCouple(inviteCode, userName, userGender) {
   // 同步云端数据到本地
   _syncCloudToLocal(couple);
 
-  // 使用者设备：my_name = 自己的名字，partner_name = 开发者的名字
+  // _syncCloudToLocal 已处理对方名字/头像/性别同步，此处仅补充自己的名字/性别
   if (userName) {
     _syncingFromCloud = true;
     set(STORAGE_KEYS.MY_NAME, userName);
-    if (couple.devName) set(STORAGE_KEYS.PARTNER_NAME, couple.devName);
-    if (couple.devAvatar) set(STORAGE_KEYS.PARTNER_AVATAR, couple.devAvatar);
     if (userGender) set(STORAGE_KEYS.MY_GENDER, userGender);
-    if (couple.devGender) set(STORAGE_KEYS.PARTNER_GENDER, couple.devGender);
     _syncingFromCloud = false;
   }
 
@@ -607,13 +639,23 @@ async function loadFromCloud() {
     }
 
     var data = res.result.data;
-    if (!data || !data.inviteCode) {
-      console.error('loadFromCloud: invalid document');
-      _clearLocalBinding();
+    if (!data) {
+      console.error('loadFromCloud: empty data');
       return false;
     }
 
-    _syncCloudToLocal(data);
+    console.log('[load] cloud response keys:', Object.keys(data));
+    if (data.albums) {
+      console.log('[load] albums count:', data.albums.length);
+      if (data.albums[0] && data.albums[0].photos) {
+        console.log('[load] first album photos:', data.albums[0].photos.length);
+        if (data.albums[0].photos[0]) {
+          console.log('[load] first photo:', JSON.stringify(data.albums[0].photos[0]).substring(0, 200));
+        }
+      }
+    }
+
+    await _syncCloudToLocal(data);
     return true;
   } catch (e) {
     console.error('loadFromCloud error:', e);
@@ -628,6 +670,21 @@ function _clearLocalBinding() {
   try { wx.removeStorageSync('couple_doc_id'); } catch (e) {}
 }
 
+// 安全清除本地数据：保留邀请码和身份信息用于恢复绑定
+function clearStorageKeepIdentity() {
+  var inviteCode = getLastInviteCode();
+  var myName = getMyName();
+  var myGender = getMyGender();
+  var partnerName = getPartnerName();
+  var partnerGender = getPartnerGender();
+  try { wx.clearStorageSync(); } catch (e) {}
+  if (inviteCode) setLastInviteCode(inviteCode);
+  if (myName) set(STORAGE_KEYS.MY_NAME, myName);
+  if (myGender) set(STORAGE_KEYS.MY_GENDER, myGender);
+  if (partnerName) set(STORAGE_KEYS.PARTNER_NAME, partnerName);
+  if (partnerGender) set(STORAGE_KEYS.PARTNER_GENDER, partnerGender);
+}
+
 // 邀请码本地缓存（用于断线恢复）
 function getLastInviteCode() { return get('last_invite_code', ''); }
 function setLastInviteCode(code) {
@@ -637,6 +694,10 @@ function setLastInviteCode(code) {
 // 将云端数据写入本地缓存（_syncingFromCloud 防止回环）
 // 只同步对方的名字/头像到本地，不覆盖自己的（自己的名字由本地维护，通过setMyName同步到云端）
 function _syncCloudToLocal(data) {
+  console.log('[sync] cloud data keys:', Object.keys(data));
+  console.log('[sync] albums:', data.albums ? ('count=' + data.albums.length + ', photos=' + (data.albums[0] && data.albums[0].photos ? data.albums[0].photos.length : 0)) : 'null');
+  console.log('[sync] devAvatar:', data.devAvatar ? data.devAvatar.substring(0, 60) : 'null');
+  console.log('[sync] userAvatar:', data.userAvatar ? data.userAvatar.substring(0, 60) : 'null');
   _syncingFromCloud = true;
   if (data.togetherDate) set(STORAGE_KEYS.TOGETHER_DATE, data.togetherDate);
 
@@ -680,24 +741,169 @@ function _syncCloudToLocal(data) {
   if (data.angry) set(STORAGE_KEYS.ANGRY, data.angry);
   if (data.reflection) set(STORAGE_KEYS.REFLECTION, data.reflection);
   if (data.learn) set(STORAGE_KEYS.LEARN, data.learn);
+  if (data.sweet) set(STORAGE_KEYS.SWEET, data.sweet);
+  if (data.avoid) set(STORAGE_KEYS.AVOID, data.avoid);
   _syncingFromCloud = false;
+
+  // 将cloud fileID转为HTTP URL（解决跨用户无法直接访问cloud fileID的问题）
+  // 注意：_resolveCloudFileIDs内部需保持_syncingFromCloud=true，防止HTTP URL回传云端
+  return _resolveCloudFileIDs(data);
+}
+
+// 将所有cloud fileID转为临时HTTP URL，使<image>可直接加载
+// 返回Promise，调方可await确保URL已解析
+function _resolveCloudFileIDs(data) {
+  var fileIDs = [];
+  var avatarFileID = null;
+
+  // 收集对方头像的cloud fileID
+  var isDev = isDeveloper();
+  var partnerAvatarField = isDev ? 'userAvatar' : 'devAvatar';
+  avatarFileID = data[partnerAvatarField];
+  if (avatarFileID && typeof avatarFileID === 'string' && avatarFileID.indexOf('cloud://') === 0) {
+    fileIDs.push(avatarFileID);
+  }
+
+  // 收集自己的头像cloud fileID
+  var myAvatarField = isDev ? 'devAvatar' : 'userAvatar';
+  var myAvatarFileID = data[myAvatarField];
+  if (myAvatarFileID && typeof myAvatarFileID === 'string' && myAvatarFileID.indexOf('cloud://') === 0) {
+    fileIDs.push(myAvatarFileID);
+  }
+
+  // 收集相册照片的cloud fileID
+  var albums = data.albums;
+  if (albums && Array.isArray(albums)) {
+    for (var i = 0; i < albums.length; i++) {
+      var photos = albums[i].photos;
+      if (!photos || !Array.isArray(photos)) continue;
+      for (var j = 0; j < photos.length; j++) {
+        var photo = photos[j];
+        if (!photo) continue;
+        var photoFileID = (photo.url && typeof photo.url === 'string' && photo.url.indexOf('cloud://') === 0) ? photo.url
+          : (photo.fileID && typeof photo.fileID === 'string' && photo.fileID.indexOf('cloud://') === 0) ? photo.fileID
+          : null;
+        if (photoFileID && fileIDs.indexOf(photoFileID) === -1) {
+          fileIDs.push(photoFileID);
+        }
+      }
+    }
+  }
+
+  console.log('[resolve] cloud data:', JSON.stringify(data).substring(0, 300));
+  console.log('[resolve] fileIDs to resolve:', fileIDs.length, fileIDs);
+
+  if (fileIDs.length === 0) return Promise.resolve();
+
+  // 保持_syncingFromCloud=true，防止HTTP URL通过set()回传云端覆盖原始cloud fileID
+  _syncingFromCloud = true;
+
+  return new Promise(function(resolve) {
+    wx.cloud.getTempFileURL({
+      fileList: fileIDs,
+      success: function(res) {
+        console.log('[resolve] getTempFileURL result:', JSON.stringify(res).substring(0, 500));
+
+        if (!res.fileList || res.fileList.length === 0) {
+          console.error('[resolve] getTempFileURL returned empty fileList');
+          _syncingFromCloud = false;
+          resolve(); return;
+        }
+
+        var urlMap = {};
+        for (var k = 0; k < res.fileList.length; k++) {
+          var item = res.fileList[k];
+          console.log('[resolve] file[' + k + '] status:', item.status, 'url:', item.tempFileURL ? item.tempFileURL.substring(0, 80) : 'null');
+          if (item.status === 0 && item.tempFileURL) {
+            urlMap[item.fileID] = item.tempFileURL;
+          }
+        }
+
+        console.log('[resolve] urlMap keys:', Object.keys(urlMap).length);
+
+        // 更新对方头像
+        if (avatarFileID && urlMap[avatarFileID]) {
+          console.log('[resolve] updating partner avatar:', urlMap[avatarFileID].substring(0, 80));
+          _syncingFromCloud = true;
+          try { wx.setStorageSync(STORAGE_KEYS.PARTNER_AVATAR, urlMap[avatarFileID]); } catch (e) {}
+          _syncingFromCloud = false;
+        } else if (avatarFileID) {
+          console.warn('[resolve] partner avatar fileID not resolved:', avatarFileID);
+        }
+
+        // 更新自己的头像
+        if (myAvatarFileID && urlMap[myAvatarFileID]) {
+          console.log('[resolve] updating my avatar:', urlMap[myAvatarFileID].substring(0, 80));
+          _syncingFromCloud = true;
+          try { wx.setStorageSync(STORAGE_KEYS.MY_AVATAR, urlMap[myAvatarFileID]); } catch (e) {}
+          _syncingFromCloud = false;
+        }
+
+        // 更新相册照片URL
+        if (albums && Array.isArray(albums)) {
+          var albumChanged = false;
+          for (var i = 0; i < albums.length; i++) {
+            var photos = albums[i].photos;
+            if (!photos || !Array.isArray(photos)) continue;
+            for (var j = 0; j < photos.length; j++) {
+              var photo = photos[j];
+              if (!photo) continue;
+              var currentUrl = photo.url || '';
+              var fid = photo.fileID || '';
+              var matchedFileID = (currentUrl.indexOf('cloud://') === 0) ? currentUrl
+                : (fid.indexOf('cloud://') === 0) ? fid : null;
+              if (matchedFileID && urlMap[matchedFileID]) {
+                albums[i].photos[j].url = urlMap[matchedFileID];
+                albumChanged = true;
+                console.log('[resolve] photo[' + i + '][' + j + '] resolved:', urlMap[matchedFileID].substring(0, 80));
+              } else if (matchedFileID) {
+                console.warn('[resolve] photo[' + i + '][' + j + '] NOT resolved, fileID:', matchedFileID);
+              }
+            }
+          }
+          if (albumChanged) {
+            _syncingFromCloud = true;
+            try { wx.setStorageSync(STORAGE_KEYS.ALBUM, albums); } catch (e) {}
+            _syncingFromCloud = false;
+            console.log('[resolve] albums updated in storage');
+          }
+        }
+
+        _syncingFromCloud = false;
+        resolve();
+      },
+      fail: function(e) {
+        console.error('[resolve] getTempFileURL FAIL:', JSON.stringify(e));
+        _syncingFromCloud = false;
+        resolve();
+      }
+    });
+  });
 }
 
 // 保存单个字段到云端（通过云函数，绕过安全规则）
 async function saveToCloud(storageKey, value) {
   const docId = getCoupleDocId();
-  if (!docId) return;
+  if (!docId) {
+    console.warn('[saveToCloud] no docId, skipping. key:', storageKey);
+    return;
+  }
 
   const cloudField = _getCloudFieldFor(storageKey);
-  if (!cloudField) return;
+  if (!cloudField) {
+    console.warn('[saveToCloud] no cloudField for key:', storageKey);
+    return;
+  }
 
+  console.log('[saveToCloud] saving key:', storageKey, '→ field:', cloudField, 'docId:', docId);
   try {
-    await wx.cloud.callFunction({
+    const res = await wx.cloud.callFunction({
       name: 'coupleOps',
       data: { action: 'saveField', docId: docId, cloudField: cloudField, value: value }
     });
+    console.log('[saveToCloud] result:', JSON.stringify(res.result));
   } catch (e) {
-    console.error('saveToCloud error:', e);
+    console.error('[saveToCloud] error:', e);
   }
 }
 
@@ -775,6 +981,8 @@ module.exports = {
   getLastViewTimestamps, updateLastView,
   getCoupleDocId, generateInviteCode, createCouple, bindCouple,
   loadFromCloud, saveToCloud, saveBatchToCloud, unbindCouple,
-  getLastInviteCode, setLastInviteCode, findCoupleByOpenid,
-  getAngry, setAngry, getReflection, setReflection, getLearn, setLearn
+  getLastInviteCode, setLastInviteCode, findCoupleByOpenid, findAllCouplesByOpenid,
+  clearStorageKeepIdentity,
+  getAngry, setAngry, getReflection, setReflection, getLearn, setLearn,
+  getSweet, setSweet, getAvoid, setAvoid
 };

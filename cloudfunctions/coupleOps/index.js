@@ -23,6 +23,10 @@ exports.main = async (event, context) => {
         return await saveBatch(event);
       case 'findCoupleByOpenid':
         return await findCoupleByOpenid(openid);
+      case 'findAllCouplesByOpenid':
+        return await findAllCouplesByOpenid(openid);
+      case 'findCoupleByCode':
+        return await findCoupleByCode(event);
       case 'unbindCouple':
         return await unbindCouple(event);
       default:
@@ -108,6 +112,22 @@ async function findCoupleByOpenid(openid) {
     return { success: true, couple: res.data[0] };
   }
   return { success: false, error: '未找到情侣文档' };
+}
+
+// 按开发者openid查找所有情侣文档（用于找回旧空间）
+async function findAllCouplesByOpenid(openid) {
+  const res = await couples.where({ devOpenid: openid }).orderBy('createdAt', 'desc').get();
+  return { success: true, couples: res.data };
+}
+
+// 按邀请码查找情侣文档（不修改文档，仅查询）
+async function findCoupleByCode(event) {
+  const { inviteCode } = event;
+  const res = await couples.where({ inviteCode: inviteCode }).get();
+  if (res.data.length > 0) {
+    return { success: true, couple: res.data[0] };
+  }
+  return { success: false, error: '邀请码不存在' };
 }
 
 // 解绑（删除文档）

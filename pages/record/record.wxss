@@ -36,6 +36,8 @@
 .angry-bg    { background: #FFF0F0; }
 .reflection-bg { background: #F0FFF0; }
 .learn-bg    { background: #FFFFF0; }
+.sweet-bg    { background: #FFF0F5; }
+.avoid-bg    { background: #FFF8F0; }
 
 .re-title {
   font-size: 30rpx;

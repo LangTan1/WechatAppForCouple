@@ -8,6 +8,9 @@ App({
       traceUser: true
     });
 
+    // 版本更新检测：新版本下载完成后提示用户重启
+    this.checkUpdate();
+
     const systemInfo = wx.getSystemInfoSync();
     this.globalData.systemInfo = systemInfo;
     this.globalData.statusBarHeight = systemInfo.statusBarHeight;
@@ -15,6 +18,33 @@ App({
     // 获取openid
     this.initOpenid();
     this.initDefaultData();
+  },
+
+  checkUpdate() {
+    if (!wx.getUpdateManager) return;
+    const updateManager = wx.getUpdateManager();
+    updateManager.onCheckForUpdate(function(res) {
+      if (res.hasUpdate) {
+        updateManager.onUpdateReady(function() {
+          wx.showModal({
+            title: '更新提示',
+            content: '新版本已准备好，是否重启应用？',
+            confirmText: '立即重启',
+            confirmColor: '#FF6B8A',
+            success(res) {
+              if (res.confirm) updateManager.applyUpdate();
+            }
+          });
+        });
+        updateManager.onUpdateFailed(function() {
+          wx.showModal({
+            title: '更新提示',
+            content: '新版本下载失败，请删除小程序后重新搜索打开',
+            showCancel: false
+          });
+        });
+      }
+    });
   },
 
   async initOpenid() {

@@ -354,3 +354,80 @@
 .bind-form {
   text-align: center;
 }
+
+/* 旧空间列表 */
+.old-spaces-section {
+  margin-top: 32rpx;
+  background: #FFFFFF;
+  border-radius: 20rpx;
+  padding: 28rpx;
+  box-shadow: 0 4rpx 20rpx rgba(255, 107, 138, 0.08);
+}
+
+.old-spaces-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333;
+  text-align: center;
+  margin-bottom: 20rpx;
+}
+
+.old-spaces-loading,
+.old-spaces-empty {
+  font-size: 26rpx;
+  color: #999;
+  text-align: center;
+  padding: 20rpx 0;
+}
+
+.old-spaces-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.old-space-item {
+  background: #FFF8F9;
+  border: 2rpx solid #FFE0E6;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  transition: all 0.2s;
+}
+
+.old-space-item:active {
+  background: #FFEEF2;
+  border-color: #FF6B8A;
+}
+
+.old-space-header {
+  margin-bottom: 8rpx;
+}
+
+.old-space-names {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.old-space-code {
+  font-size: 24rpx;
+  color: #FF6B8A;
+  font-weight: 600;
+  letter-spacing: 2rpx;
+}
+
+.old-space-info {
+  font-size: 24rpx;
+  color: #999;
+  margin-bottom: 8rpx;
+}
+
+.old-space-partner {
+  color: #BBB;
+}
+
+.old-space-hint {
+  font-size: 22rpx;
+  color: #FFB6C1;
+  text-align: right;
+}

@@ -50,7 +50,7 @@
         <view class="re-icon angry-bg">😤</view>
         <view>
           <view class="re-title">气气本</view>
-          <view class="re-sub">记录生气的瞬间，发泄完就翻篇～</view>
+          <view class="re-sub">给情绪一个出口，不让怨气过夜</view>
         </view>
       </view>
       <text class="re-arrow">›</text>
@@ -61,7 +61,7 @@
         <view class="re-icon reflection-bg">🤔</view>
         <view>
           <view class="re-title">醒醒贴</view>
-          <view class="re-sub">吵架后反省自己，下次不再犯</view>
+          <view class="re-sub">把争执变成关系升级的机会</view>
         </view>
       </view>
       <text class="re-arrow">›</text>
@@ -72,7 +72,29 @@
         <view class="re-icon learn-bg">📚</view>
         <view>
           <view class="re-title">学学好</view>
-          <view class="re-sub">看到对方好习惯，记下来跟着学</view>
+          <view class="re-sub">让彼此朝更好的方向生长</view>
+        </view>
+      </view>
+      <text class="re-arrow">›</text>
+    </view>
+
+    <view class="record-entry flex-between" bindtap="goSweet">
+      <view class="re-left flex-row">
+        <view class="re-icon sweet-bg">💗</view>
+        <view>
+          <view class="re-title">甜甜记</view>
+          <view class="re-sub">储存感情存款，吵架时拿出来救急</view>
+        </view>
+      </view>
+      <text class="re-arrow">›</text>
+    </view>
+
+    <view class="record-entry flex-between" bindtap="goAvoid">
+      <view class="re-left flex-row">
+        <view class="re-icon avoid-bg">⚡</view>
+        <view>
+          <view class="re-title">避雷贴</view>
+          <view class="re-sub">写出自己的使用说明书，避免重复踩坑</view>
         </view>
       </view>
       <text class="re-arrow">›</text>

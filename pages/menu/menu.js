@@ -201,11 +201,11 @@ Page({
       { id: 2004, name: '洗衣服', emoji: '👕', topCategory: 'other', category: 'housework', price: 10, published: true, addedBy: 'dev' },
       { id: 2005, name: '按摩服务', emoji: '💆', topCategory: 'other', category: 'housework', price: 15, published: true, addedBy: 'dev' },
       // 情侣互动 - 约会活动
-      { id: 2011, name: '陪看电影', emoji: '🎬', topCategory: 'other', category: 'date', price: 12, published: true, addedBy: 'dev' },
-      { id: 2012, name: '陪逛街', emoji: '🛍️', topCategory: 'other', category: 'date', price: 15, published: true, addedBy: 'dev' },
-      { id: 2013, name: '陪散步', emoji: '🚶', topCategory: 'other', category: 'date', price: 8, published: true, addedBy: 'dev' },
-      { id: 2014, name: '陪玩游戏', emoji: '🎮', topCategory: 'other', category: 'date', price: 10, published: true, addedBy: 'dev' },
-      { id: 2015, name: '陪旅行', emoji: '✈️', topCategory: 'other', category: 'date', price: 30, published: true, addedBy: 'dev' },
+      { id: 2011, name: '一起看电影', emoji: '🎬', topCategory: 'other', category: 'date', price: 12, published: true, addedBy: 'dev' },
+      { id: 2012, name: '一起逛街', emoji: '🛍️', topCategory: 'other', category: 'date', price: 15, published: true, addedBy: 'dev' },
+      { id: 2013, name: '一起散步', emoji: '🚶', topCategory: 'other', category: 'date', price: 8, published: true, addedBy: 'dev' },
+      { id: 2014, name: '一起玩游戏', emoji: '🎮', topCategory: 'other', category: 'date', price: 10, published: true, addedBy: 'dev' },
+      { id: 2015, name: '一起旅行', emoji: '✈️', topCategory: 'other', category: 'date', price: 30, published: true, addedBy: 'dev' },
       // 情侣互动 - 甜蜜亲密
       { id: 2021, name: '亲亲一次', emoji: '💋', topCategory: 'other', category: 'intimate', price: 10, published: true, addedBy: 'dev' },
       { id: 2022, name: '抱抱一次', emoji: '🤗', topCategory: 'other', category: 'intimate', price: 8, published: true, addedBy: 'dev' },

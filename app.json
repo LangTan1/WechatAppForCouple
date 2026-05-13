@@ -14,7 +14,9 @@
     "pages/achievement/achievement",
     "pages/angry/angry",
     "pages/reflection/reflection",
-    "pages/learn/learn"
+    "pages/learn/learn",
+    "pages/sweet/sweet",
+    "pages/avoid/avoid"
   ],
   "window": {
     "backgroundTextStyle": "light",

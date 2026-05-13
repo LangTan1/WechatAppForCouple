@@ -35,9 +35,11 @@
     ├── wishlist/              # 愿望清单
     ├── mood/                  # 每日心情打卡
     ├── achievement/           # 恋爱成就（25个成就·4等级）
-    ├── angry/                 # 气气本（记录生气瞬间）
-    ├── reflection/            # 醒醒贴（自我反省）
-    └── learn/                 # 学学好（记录好习惯）
+    ├── angry/                 # 气气本（给情绪一个出口，不让怨气过夜）
+    ├── reflection/            # 醒醒贴（把争执变成关系升级的机会）
+    ├── learn/                 # 学学好（让彼此朝更好的方向生长）
+    ├── sweet/                 # 甜甜记（储存感情存款，吵架时拿出来救急）
+    └── avoid/                 # 避雷贴（写出自己的使用说明书，避免重复踩坑）
 ```
 
 ## 双角色体系
@@ -68,7 +70,7 @@
 - 位置：`cloudfunctions/coupleOps/`
 - 通过 `wx.cloud.callFunction({ name: 'coupleOps', data: { action, ... } })` 调用
 - openid 从服务端 `wxContext.OPENID` 获取，不依赖客户端传参
-- 支持操作：`createCouple`、`bindCouple`、`loadCouple`、`saveField`、`saveBatch`、`findCoupleByOpenid`、`unbindCouple`
+- 支持操作：`createCouple`、`bindCouple`、`loadCouple`、`saveField`、`saveBatch`、`findCoupleByOpenid`、`findAllCouplesByOpenid`、`findCoupleByCode`、`unbindCouple`
 
 ### 绑定流程
 1. **创建者**：输入开发者密钥→输入名字+性别+日期→创建云端文档→生成6位邀请码
@@ -82,13 +84,15 @@
 
 ### 重置流程
 - **只有开发者可以重置**：开发者"重新设置"→删除云端文档→清除本地→回到初始界面
-- 使用者"重新绑定"：清除本地 `couple_doc_id` + `last_role` → 进入邀请码输入界面
-- 使用者检测失效：首页轮询时 `loadFromCloud` 失败 + `couple_doc_id` 被清除 → 弹窗提示"对方已重置" → 跳转绑定页
+- 使用者"重新绑定"：使用 `clearStorageKeepIdentity` 清除本地（保留邀请码+身份信息）→ 进入邀请码输入界面
+- 使用者检测失效：首页轮询时 `loadFromCloud` 失败 + `couple_doc_id` 被清除 → 弹窗提示"对方已重置" → 使用 `clearStorageKeepIdentity` 跳转绑定页
 
 ### 关键函数（storage.js，全部通过云函数coupleOps执行）
 - `createCouple(openid, info)`：创建情侣文档，info含devName/devGender/togetherDate
 - `bindCouple(inviteCode, userName, userGender)`：绑定对方（openid由云函数从服务端获取）
-- `loadFromCloud()`：从云端加载，验证inviteCode字段，失败时清除本地绑定
+- `loadFromCloud()`：从云端加载，仅文档确认被删除时清除绑定，网络错误保留绑定
+- `clearStorageKeepIdentity()`：清除storage前自动保存邀请码+双方名字+性别，防止恢复信息丢失
+- `findCoupleByCode(inviteCode)`：按邀请码查询云端文档（只读，不修改）
 - `saveToCloud(storageKey, value)`：角色感知的单字段云同步
 - `saveBatchToCloud(updates)`：批量保存多个字段到云端
 - `unbindCouple()`：删除云端文档+清除本地绑定
@@ -157,9 +161,19 @@
 
 ## 头像系统
 - 头像上传到微信云存储（`wx.cloud.uploadFile`），存储 cloud fileID（如 `cloud://xxx/avatars/my_xxx.jpg`）
-- cloud fileID 全局可访问，任何设备都能加载，解决本地临时路径跨设备不可用的问题
-- 同步到云端的是 fileID 而非本地路径，对方设备可正常显示
-- `<image src="cloudFileID">` 原生支持 cloud fileID，无需额外处理
+- cloud fileID 存入云数据库同步给对方
+- profile 页有 5 秒轮询，确保异步下载完成后刷新显示
+
+## 云文件跨用户访问（头像+相册照片）
+### 问题
+cloud fileID（`cloud://`）在 `<image>` 组件中**跨用户无法直接加载**，只有上传者自己能访问。
+
+### 解决方案
+- `_syncCloudToLocal` 完成数据同步后调用 `_resolveCloudFileIDs(data)`
+- `_resolveCloudFileIDs` 收集所有 cloud fileID（头像+相册照片），调用 `wx.cloud.getTempFileURL` 批量转为 HTTP URL（`https://`）
+- HTTP URL 写入本地 storage（`wx.setStorageSync`），`<image>` 可直接加载
+- **关键**：整个过程在 `_syncingFromCloud = true` 保护下执行，防止 HTTP URL 通过 `set()` 自动同步回云端覆盖原始 cloud fileID
+- `loadFromCloud` 使用 `await` 等待 `_resolveCloudFileIDs` 完成后才返回，确保页面读取到的是 HTTP URL
 
 ## 心情打卡系统
 - 5种心情：😊开心/🥰甜蜜/😌平静/😢难过/😤生气
@@ -171,16 +185,16 @@
 - 成就定义在 `pages/achievement/achievement.js`，运行时状态存storage
 - `unlockAchievement(id)` 幂等解锁
 
-## Storage Key 清单（38个）
+## Storage Key 清单（40个）
 角色/身份：`setup_done`, `dev_key`, `user_key`, `current_role`, `last_role`, `lock_enabled`, `lock_pin`
 情侣信息：`together_date`, `my_name`, `partner_name`, `my_avatar`, `partner_avatar`, `my_gender`, `partner_gender`, `boy_coins`, `girl_coins`
-功能数据：`custom_diaries`, `custom_whispers`, `custom_wishes`, `custom_anniversaries`, `custom_menu_items`, `custom_album`, `custom_moods`, `custom_achievements`, `custom_angry`, `custom_reflection`, `custom_learn`
+功能数据：`custom_diaries`, `custom_whispers`, `custom_wishes`, `custom_anniversaries`, `custom_menu_items`, `custom_album`, `custom_moods`, `custom_achievements`, `custom_angry`, `custom_reflection`, `custom_learn`, `custom_sweet`, `custom_avoid`
 订单系统：`order_queue`, `food_requests`, `coin_requests`, `order_total_count`, `coin_transactions`
 云同步：`couple_doc_id`
 其他：`last_quote_date`, `last_quote_index`, `weather_cache`, `last_view_timestamps`, `last_invite_code`
 
 ## 云字段映射
-静态映射（CLOUD_FIELDS）：`together_date`→`togetherDate`, `boy_coins`→`devCoins`, `girl_coins`→`userCoins`, `custom_menu_items`→`menuItems`, `custom_diaries`→`diaries`, `custom_whispers`→`whispers`, `custom_wishes`→`wishes`, `custom_anniversaries`→`anniversaries`, `custom_album`→`albums`, `custom_moods`→`moods`, `custom_achievements`→`achievements`, `order_queue`→`orderQueue`, `food_requests`→`foodRequests`, `coin_requests`→`coinRequests`, `order_total_count`→`orderTotalCount`, `coin_transactions`→`coinTransactions`, `custom_angry`→`angry`, `custom_reflection`→`reflection`, `custom_learn`→`learn`
+静态映射（CLOUD_FIELDS）：`together_date`→`togetherDate`, `boy_coins`→`devCoins`, `girl_coins`→`userCoins`, `custom_menu_items`→`menuItems`, `custom_diaries`→`diaries`, `custom_whispers`→`whispers`, `custom_wishes`→`wishes`, `custom_anniversaries`→`anniversaries`, `custom_album`→`albums`, `custom_moods`→`moods`, `custom_achievements`→`achievements`, `order_queue`→`orderQueue`, `food_requests`→`foodRequests`, `coin_requests`→`coinRequests`, `order_total_count`→`orderTotalCount`, `coin_transactions`→`coinTransactions`, `custom_angry`→`angry`, `custom_reflection`→`reflection`, `custom_learn`→`learn`, `custom_sweet`→`sweet`, `custom_avoid`→`avoid`
 角色感知映射（`_getCloudFieldFor`）：`my_name`↔`devName`/`userName`, `partner_name`↔`userName`/`devName`, `my_avatar`↔`devAvatar`/`userAvatar`, `my_gender`↔`devGender`/`userGender`
 
 ## 注意事项
@@ -189,7 +203,7 @@
 - storage.js 是唯一数据源
 - 成就定义常量在 achievement.js 中，不存storage
 - 天气缓存30分钟，但名字始终读最新值
-- 悄悄话/首页/商城有自动轮询，onHide/onUnload时停止
+- 悄悄话/首页/商城/我的页有自动轮询（5秒），悄悄话3秒，onHide/onUnload时停止
 - 实时天气使用和风天气API，需在 `utils/weather.js` 中配置 `QWEATHER_KEY` 和 `QWEATHER_HOST`
 - app.json 中需声明 `wx.getFuzzyLocation` 权限和 `requiredPrivateInfos`
 
@@ -198,19 +212,37 @@
 `loadFromCloud` 原先在任何错误时都清除 `couple_doc_id`，导致网络临时故障（如冷启动）时绑定丢失，用户被迫重新输入密钥/邀请码。
 
 ### 修复策略
-- **loadFromCloud**：仅在文档确认被删除（errCode=-1 或 errMsg含"not exist"）时清除绑定，网络错误保留 `couple_doc_id`
+- **loadFromCloud**：仅在文档确认被删除（errMsg含"not exist"/"not found"）时清除绑定，网络错误保留 `couple_doc_id`
 - **onLoad 重试**：`loadFromCloud` 失败后等1.5秒重试，重试仍失败但 `couple_doc_id` 存在时用本地数据正常进入
 - **邀请码本地缓存**：绑定成功后保存 `last_invite_code`，用于断线恢复
+- **安全清除**：`clearStorageKeepIdentity()` 清除storage前自动保存邀请码+双方名字+性别，防止恢复信息丢失
 - **用户恢复（rebind）**：`setup_done` 为 true 但 `couple_doc_id` 丢失且有本地名字时，显示简化恢复界面（预填邀请码+已有名字性别），无需重填全部信息
-- **开发者恢复**：`_createCoupleIfNeeded` 先通过 `findCoupleByOpenid` 查找云端已有文档，找到则恢复绑定而非创建新文档，防止开发者因网络错误创建重复空间导致使用者被孤立
+
+### 开发者恢复（四层保险）
+1. **findCoupleByOpenid**：按 openid 自动查找云端已有文档
+2. **findCoupleByCode**：按缓存的 `last_invite_code` 查找（只读，不修改文档）
+3. **手动输入邀请码**：进入 `dev_recover` 页面，开发者可输入使用者告诉TA的邀请码恢复
+4. **查找旧空间**：`findAllCouplesByOpenid` 查找该 openid 下所有历史文档，显示邀请码和绑定状态，开发者可选择恢复
+- 四层都失败才进入全新设置流程创建新空间
+- 防止开发者删除小程序后创建重复空间导致使用者被孤立
 
 ### 关键函数
 - `findCoupleByOpenid(openid)`：按 devOpenid 查询云端已有情侣文档
+- `findAllCouplesByOpenid()`：按 devOpenid 查询所有历史情侣文档（用于找回旧空间）
+- `findCoupleByCode(inviteCode)`：按邀请码查询云端文档（只读，不修改，不检查userOpenid）
 - `getLastInviteCode() / setLastInviteCode(code)`：邀请码本地缓存
+- `clearStorageKeepIdentity()`：安全清除本地数据，保留恢复所需信息
+- `_tryRestoreCouple()`：三层恢复逻辑的统一入口
+- `_doRestore(doc)`：恢复操作的统一执行（设置couple_doc_id+身份信息+跳转主页）
 - `_afterCloudLoaded()`：云端加载成功后的统一处理
 - `_enterAfterCloudFail()`：网络失败但绑定保留时的降级进入
 - `confirmRebind()`：用户确认恢复绑定
 - `showFullBindInput()`：用户切换到完整绑定界面（新邀请码）
+
+## 版本更新检测
+- `app.js` 中使用 `wx.getUpdateManager` 检测新版本
+- 新版本下载完成后弹窗提示用户重启应用
+- 避免用户需要删除小程序才能获取最新版本
 
 ## 部署注意事项
 - `cloudfunctions/coupleOps` 需要在微信开发者工具中右键→上传并部署（云端安装依赖）

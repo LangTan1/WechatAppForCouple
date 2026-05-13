@@ -81,7 +81,7 @@ Page({
         confirmText: '去绑定',
         confirmColor: '#FF6B8A',
         success: () => {
-          try { wx.clearStorageSync(); } catch (e) {}
+          storage.clearStorageKeepIdentity();
           wx.reLaunch({ url: '/pages/setup/setup' });
         }
       });

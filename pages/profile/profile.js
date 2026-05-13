@@ -33,6 +33,8 @@ Page({
     coinMessage: '',
   },
 
+  _pollTimer: null,
+
   onLoad() {
     this.initData();
   },
@@ -40,6 +42,29 @@ Page({
   onShow() {
     this.refreshData();
     this.syncFromCloud();
+    this._startPolling();
+  },
+
+  onHide() {
+    this._stopPolling();
+  },
+
+  onUnload() {
+    this._stopPolling();
+  },
+
+  _startPolling() {
+    this._stopPolling();
+    this._pollTimer = setInterval(() => {
+      this.syncFromCloud();
+    }, 5000);
+  },
+
+  _stopPolling() {
+    if (this._pollTimer) {
+      clearInterval(this._pollTimer);
+      this._pollTimer = null;
+    }
   },
 
   async syncFromCloud() {

@@ -1,18 +1,18 @@
 <view class="page">
   <view class="header">
-    <view class="header-title">😤 气气本</view>
-    <view class="header-desc">给情绪一个出口，不让怨气过夜</view>
+    <view class="header-title">⚡ 避雷贴</view>
+    <view class="header-desc">记下不舒服的举动，互相避雷</view>
   </view>
 
   <view class="add-btn" bindtap="showAdd">
     <text class="add-icon">+</text>
-    <text class="add-text">记录一下</text>
+    <text class="add-text">记一笔避雷</text>
   </view>
 
   <view class="list" wx:if="{{items.length > 0}}">
     <view class="item" wx:for="{{items}}" wx:key="id">
       <view class="item-header flex-between">
-        <view class="item-event">😤 {{item.event}}</view>
+        <view class="item-event">⚡ {{item.event}}</view>
         <view class="item-delete" bindtap="deleteItem" data-id="{{item.id}}">✕</view>
       </view>
       <view class="item-meta">
@@ -27,18 +27,18 @@
   </view>
 
   <view class="empty" wx:else>
-    <view class="empty-icon">😤</view>
-    <view class="empty-text">还没有记录哦</view>
-    <view class="empty-desc">生气了就来发泄一下吧</view>
+    <view class="empty-icon">⚡</view>
+    <view class="empty-text">还没有避雷记录哦</view>
+    <view class="empty-desc">写出不舒服的点，互相避雷</view>
   </view>
 
   <!-- 添加弹窗 -->
   <view class="modal-mask" wx:if="{{showModal}}" catchtap="noop">
     <view class="modal" catchtap="noop">
-      <view class="modal-title">😤 记录一下</view>
+      <view class="modal-title">⚡ 记一笔避雷</view>
       <view class="form-group">
-        <view class="form-label">因为什么事情？</view>
-        <input class="form-input" placeholder="例如：忘记了纪念日" value="{{newEvent}}" bindinput="onEventInput" />
+        <view class="form-label">什么事情让你不舒服？</view>
+        <input class="form-input" placeholder="例如：已读不回" value="{{newEvent}}" bindinput="onEventInput" />
       </view>
       <view class="form-group">
         <view class="form-label">什么时候发生的？</view>
@@ -47,12 +47,12 @@
         </picker>
       </view>
       <view class="form-group">
-        <view class="form-label">你的感受</view>
-        <textarea class="form-textarea" placeholder="写写你的感受，发泄出来就好了..." value="{{newContent}}" bindinput="onContentInput" maxlength="500" />
+        <view class="form-label">你的感受和期望</view>
+        <textarea class="form-textarea" placeholder="写下你的感受，以及你希望对方怎么做..." value="{{newContent}}" bindinput="onContentInput" maxlength="500" />
       </view>
       <view class="modal-btns flex-row">
         <view class="modal-btn cancel" bindtap="hideModal">取消</view>
-        <view class="modal-btn confirm" bindtap="addItem">发泄！</view>
+        <view class="modal-btn confirm" bindtap="addItem">记下！</view>
       </view>
     </view>
   </view>

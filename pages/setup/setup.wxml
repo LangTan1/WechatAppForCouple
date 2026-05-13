@@ -24,6 +24,60 @@
     </view>
   </view>
 
+  <!-- 开发者恢复：输入邀请码找回空间 -->
+  <view wx:if="{{step === 'dev_recover'}}">
+    <view class="welcome-area">
+      <text class="welcome-emoji">🔍</text>
+      <view class="welcome-title">找回情侣空间</view>
+      <view class="welcome-sub">未自动找到你的空间，请输入邀请码恢复</view>
+    </view>
+
+    <view class="setup-form">
+      <view wx:if="{{devRecoverCode}}" style="text-align:center;margin-bottom:30rpx;">
+        <view style="font-size:24rpx;color:#999;margin-bottom:12rpx;">上次缓存的邀请码</view>
+        <view class="invite-code-area" style="display:inline-block;">
+          <text class="invite-code">{{devRecoverCode}}</text>
+        </view>
+      </view>
+
+      <view class="form-title" style="margin-top:20rpx;">输入邀请码恢复</view>
+      <input
+        class="key-input invite-input"
+        placeholder="请输入6位邀请码"
+        value="{{devRecoverCode}}"
+        bindinput="onDevRecoverCodeInput"
+        maxlength="6"
+      />
+      <view class="key-hint" wx:if="{{devRecoverError}}">{{devRecoverError}}</view>
+      <view class="btn-primary {{devRecoverLoading ? 'disabled' : ''}}" bindtap="confirmDevRecover">
+        {{devRecoverLoading ? '恢复中...' : '恢复空间 💕'}}
+      </view>
+      <view class="btn-secondary" bindtap="findOldSpaces">🔍 查找我的旧空间</view>
+      <view class="btn-secondary" bindtap="skipToNewSetup">跳过，创建新空间</view>
+
+      <!-- 旧空间列表 -->
+      <view wx:if="{{showOldSpaces}}" class="old-spaces-section">
+        <view class="old-spaces-title">找到 {{oldSpaces.length}} 个旧空间</view>
+        <view wx:if="{{oldSpacesLoading}}" class="old-spaces-loading">查找中...</view>
+        <view wx:elif="{{oldSpaces.length === 0}}" class="old-spaces-empty">没有找到旧空间</view>
+        <view wx:else class="old-spaces-list">
+          <view class="old-space-item" wx:for="{{oldSpaces}}" wx:key="_id" bindtap="restoreOldSpace" data-couple="{{item}}">
+            <view class="old-space-header flex-between">
+              <view class="old-space-names">{{item.devName || '未命名'}} {{item.userName ? '& ' + item.userName : ''}}</view>
+              <view class="old-space-code">邀请码: {{item.inviteCode}}</view>
+            </view>
+            <view class="old-space-info">
+              <text wx:if="{{item.togetherDate}}">在一起: {{item.togetherDate}}</text>
+              <text wx:if="{{item.userName}}" class="old-space-partner"> · 已绑定: {{item.userName}}</text>
+              <text wx:else class="old-space-partner"> · 等待绑定</text>
+            </view>
+            <view class="old-space-hint">点击恢复此空间</view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
   <!-- 设置情侣信息（开发者输入自己的名字和性别） -->
   <view wx:if="{{step === 'setup_info'}}">
     <view class="welcome-area small">

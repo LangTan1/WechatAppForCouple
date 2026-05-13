@@ -24,6 +24,14 @@ Page({
     showDevModal: false,
     devResetKey: '',
     devResetError: '',
+    // 开发者恢复相关
+    devRecoverCode: '',
+    devRecoverError: '',
+    devRecoverLoading: false,
+    // 旧空间查找
+    oldSpaces: [],
+    oldSpacesLoading: false,
+    showOldSpaces: false,
     // 绑定相关
     inviteCode: '',
     bindCode: '',
@@ -101,29 +109,162 @@ Page({
     this.setData({ inputKey: e.detail.value, keyError: '' });
   },
 
-  verifyDevKey() {
+  async verifyDevKey() {
     const key = this.data.inputKey.trim();
     if (!key) {
       this.setData({ keyError: '请输入密钥～' });
       return;
     }
     const savedDevKey = storage.getDevKey() || DEFAULT_DEV_KEY;
-    if (key === savedDevKey) {
-      if (!storage.getDevKey()) storage.setDevKey(key);
-      if (!storage.isSetupDone()) {
-        this.setData({
-          step: 'setup_info', inputKey: '', keyError: '',
-          myName: storage.getMyName(),
-          myGender: storage.getMyGender(),
-          togetherDate: storage.getTogetherDate()
-        });
-      } else {
-        storage.setCurrentRole('dev');
-        this.goMain();
-      }
-    } else {
+    if (key !== savedDevKey) {
       this.setData({ keyError: '密钥不正确' });
+      return;
     }
+
+    if (!storage.getDevKey()) storage.setDevKey(key);
+
+    if (storage.isSetupDone()) {
+      storage.setCurrentRole('dev');
+      this.goMain();
+      return;
+    }
+
+    // 尝试恢复已有情侣空间（防重复创建）
+    var restored = await this._tryRestoreCouple();
+    if (restored) return;
+
+    // 恢复失败，显示恢复选项（可输入邀请码或创建新空间）
+    this.setData({
+      step: 'dev_recover', inputKey: '', keyError: '',
+      devRecoverCode: storage.getLastInviteCode() || '',
+      devRecoverError: '',
+      devRecoverLoading: false
+    });
+  },
+
+  // 尝试恢复已有情侣空间，返回 true 表示成功
+  async _tryRestoreCouple() {
+    // 方法1：通过 openid 查找云端已有文档
+    var openid = app.globalData.openid;
+    if (!openid) {
+      for (var w = 0; w < 10; w++) {
+        await new Promise(function(r) { setTimeout(r, 500); });
+        openid = app.globalData.openid;
+        if (openid) break;
+      }
+    }
+
+    if (openid) {
+      try {
+        var existing = await storage.findCoupleByOpenid(openid);
+        if (existing && existing._id && existing.inviteCode) {
+          return this._doRestore(existing);
+        }
+      } catch (e) {
+        console.error('findCoupleByOpenid 失败:', e);
+      }
+    }
+
+    // 方法2：通过缓存的邀请码查找恢复
+    var lastCode = storage.getLastInviteCode();
+    if (lastCode) {
+      try {
+        var res = await wx.cloud.callFunction({
+          name: 'coupleOps',
+          data: { action: 'findCoupleByCode', inviteCode: lastCode }
+        });
+        if (res.result && res.result.success && res.result.couple) {
+          return this._doRestore(res.result.couple);
+        }
+      } catch (e) {
+        console.error('通过邀请码恢复失败:', e);
+      }
+    }
+
+    return false;
+  },
+
+  // 执行恢复操作
+  _doRestore(doc) {
+    storage.set('couple_doc_id', doc._id);
+    storage.setLastInviteCode(doc.inviteCode);
+    storage.setSetupDone();
+    storage.setCurrentRole('dev');
+    if (doc.devName) storage.setMyName(doc.devName);
+    if (doc.devGender) storage.setMyGender(doc.devGender);
+    if (doc.togetherDate) storage.setTogetherDate(doc.togetherDate);
+    if (doc.userName) storage.setPartnerName(doc.userName);
+    if (doc.userGender) storage.setPartnerGender(doc.userGender);
+    if (doc.devAvatar) storage.setMyAvatar(doc.devAvatar);
+    if (doc.userAvatar) storage.setPartnerAvatar(doc.userAvatar);
+    wx.showToast({ title: '已恢复情侣空间 💕', icon: 'none', duration: 1500 });
+    setTimeout(() => this.goMain(), 1500);
+    return true;
+  },
+
+  // ========== 开发者邀请码恢复 ==========
+  onDevRecoverCodeInput(e) {
+    this.setData({ devRecoverCode: e.detail.value.toUpperCase(), devRecoverError: '' });
+  },
+
+  async confirmDevRecover() {
+    var code = this.data.devRecoverCode.trim();
+    if (!code || code.length !== 6) {
+      this.setData({ devRecoverError: '请输入6位邀请码' });
+      return;
+    }
+    this.setData({ devRecoverLoading: true, devRecoverError: '' });
+    try {
+      var res = await wx.cloud.callFunction({
+        name: 'coupleOps',
+        data: { action: 'findCoupleByCode', inviteCode: code }
+      });
+      if (res.result && res.result.success && res.result.couple) {
+        this._doRestore(res.result.couple);
+        return;
+      }
+      this.setData({ devRecoverError: res.result ? res.result.error : '邀请码不存在', devRecoverLoading: false });
+    } catch (e) {
+      console.error('邀请码恢复失败:', e);
+      this.setData({ devRecoverError: '恢复失败，请重试', devRecoverLoading: false });
+    }
+  },
+
+  skipToNewSetup() {
+    this.setData({
+      step: 'setup_info',
+      myName: storage.getMyName(),
+      myGender: storage.getMyGender(),
+      togetherDate: storage.getTogetherDate()
+    });
+  },
+
+  // ========== 查找旧空间 ==========
+  async findOldSpaces() {
+    this.setData({ oldSpacesLoading: true, oldSpaces: [], showOldSpaces: true });
+    try {
+      var couples = await storage.findAllCouplesByOpenid();
+      if (couples.length === 0) {
+        this.setData({ oldSpacesLoading: false });
+        wx.showToast({ title: '没有找到旧空间', icon: 'none' });
+        return;
+      }
+      this.setData({ oldSpaces: couples, oldSpacesLoading: false });
+    } catch (e) {
+      console.error('findOldSpaces error:', e);
+      this.setData({ oldSpacesLoading: false });
+      wx.showToast({ title: '查找失败，请重试', icon: 'none' });
+    }
+  },
+
+  hideOldSpaces() {
+    this.setData({ showOldSpaces: false });
+  },
+
+  restoreOldSpace(e) {
+    var couple = e.currentTarget.dataset.couple;
+    if (!couple || !couple._id) return;
+    this._doRestore(couple);
   },
 
   // ========== 信息设置 ==========
@@ -203,24 +344,16 @@ Page({
   async _createCoupleIfNeeded() {
     if (storage.getCoupleDocId()) return;
 
-    // 先检查云端是否已有此开发者的情侣文档（防止网络错误导致重复创建）
-    var openid = app.globalData.openid;
-    if (openid) {
-      var existing = await storage.findCoupleByOpenid(openid);
-      if (existing) {
-        // 找到已有文档，恢复绑定而非创建新的
-        storage.set('couple_doc_id', existing._id);
-        storage.setLastInviteCode(existing.inviteCode);
-        if (existing.userName) storage.setPartnerName(existing.userName);
-        if (existing.userGender) storage.setPartnerGender(existing.userGender);
-        this.setData({
-          step: 'bind_wait',
-          inviteCode: existing.inviteCode,
-          bindCreating: false,
-          bindCreateError: ''
-        });
-        return;
-      }
+    // 尝试恢复已有情侣空间（防重复创建）
+    var restored = await this._tryRestoreCouple();
+    if (restored) {
+      this.setData({
+        step: 'bind_wait',
+        inviteCode: storage.getLastInviteCode(),
+        bindCreating: false,
+        bindCreateError: ''
+      });
+      return;
     }
 
     await this._createCoupleAndShowCode();
@@ -405,10 +538,13 @@ Page({
   },
 
   reBind() {
-    try { wx.clearStorageSync(); } catch (e) {}
+    storage.clearStorageKeepIdentity();
     this.setData({
       step: 'bind_input',
-      bindCode: '', bindName: '', bindGender: '', bindError: '',
+      bindCode: storage.getLastInviteCode(),
+      bindName: storage.getMyName(),
+      bindGender: storage.getMyGender(),
+      bindError: '',
       bindLoading: false
     });
   },

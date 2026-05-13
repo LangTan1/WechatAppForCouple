@@ -25,5 +25,11 @@ Page({
   },
   goLearn() {
     wx.navigateTo({ url: '/pages/learn/learn' });
+  },
+  goSweet() {
+    wx.navigateTo({ url: '/pages/sweet/sweet' });
+  },
+  goAvoid() {
+    wx.navigateTo({ url: '/pages/avoid/avoid' });
   }
 });
