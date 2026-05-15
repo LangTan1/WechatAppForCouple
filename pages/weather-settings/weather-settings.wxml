@@ -1,0 +1,30 @@
+<view class="page">
+  <view class="intro-card">
+    <view class="intro-title">设置你的天气位置</view>
+    <view class="intro-desc">首页会优先展示你最近一次同步的天气和区县位置。</view>
+  </view>
+
+  <view class="panel-card">
+    <view class="section-title">当前状态</view>
+    <view class="info-row">
+      <text class="info-label">模式</text>
+      <text class="info-value">{{weatherModeLabel}}</text>
+    </view>
+    <view class="info-row">
+      <text class="info-label">位置</text>
+      <text class="info-value">{{weatherLocationLabel}}</text>
+    </view>
+    <view class="info-row">
+      <text class="info-label">更新</text>
+      <text class="info-value">{{weatherUpdatedAtLabel}}</text>
+    </view>
+  </view>
+
+  <view class="panel-card">
+    <view class="section-title">位置设置</view>
+    <view class="action-btn primary" bindtap="useCurrentWeatherLocation">使用当前位置</view>
+    <picker mode="region" value="{{manualRegion}}" bindchange="onManualRegionChange">
+      <view class="action-btn secondary">手动设置区县</view>
+    </picker>
+  </view>
+</view>

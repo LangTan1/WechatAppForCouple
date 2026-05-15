@@ -493,7 +493,7 @@ Page({
       }
     } catch (e) {
       console.error('恢复绑定失败:', e);
-      this.setData({ rebindError: '恢复失败，请重试', bindLoading: false });
+      this.setData({ rebindError: '恢复失败，请重试', rebindLoading: false });
     }
   },
 

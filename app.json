@@ -5,6 +5,7 @@
     "pages/menu/menu",
     "pages/record/record",
     "pages/profile/profile",
+    "pages/weather-settings/weather-settings",
     "pages/diary/diary",
     "pages/whisper/whisper",
     "pages/album/album",

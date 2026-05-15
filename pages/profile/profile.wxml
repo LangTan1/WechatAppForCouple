@@ -1,5 +1,4 @@
 <view class="page">
-  <!-- 情侣信息头 -->
   <view class="profile-header">
     <view class="couple-avatars flex-center">
       <view class="avatar-wrap" bindtap="changeMyAvatar">
@@ -11,7 +10,7 @@
         <text class="avatar-edit">📷</text>
       </view>
       <view class="heart-connector">
-        <text class="heart-beat">❤️</text>
+        <text class="heart-beat">❤</text>
       </view>
       <view class="avatar-wrap" bindtap="changePartnerAvatar">
         <view class="avatar partner-avatar flex-center">
@@ -25,12 +24,11 @@
     <view class="days-info">
       <text>我们已经在一起</text>
       <text class="days-big">{{togetherDays}}</text>
-      <text>天啦 💕</text>
+      <text>天啦 💖</text>
     </view>
     <view class="date-info" bindtap="editTogetherDate">从 {{togetherDateStr}} 开始 ›</view>
   </view>
 
-  <!-- 统计数据 -->
   <view class="stats-row flex-row">
     <view class="stat-item" bindtap="goDiary">
       <view class="stat-num">{{diaryCount}}</view>
@@ -46,7 +44,6 @@
     </view>
   </view>
 
-  <!-- 恋爱成就 -->
   <c-card title="恋爱成就">
     <view class="ach-summary flex-between" bindtap="goAchievement">
       <view class="ach-summary-info">
@@ -55,27 +52,25 @@
           <text class="ach-badge-item" wx:if="{{badgeStats.bronze > 0}}">🥉{{badgeStats.bronze}}</text>
           <text class="ach-badge-item" wx:if="{{badgeStats.silver > 0}}">🥈{{badgeStats.silver}}</text>
           <text class="ach-badge-item" wx:if="{{badgeStats.gold > 0}}">🥇{{badgeStats.gold}}</text>
-          <text class="ach-badge-item" wx:if="{{badgeStats.platinum > 0}}">💎{{badgeStats.platinum}}</text>
+          <text class="ach-badge-item" wx:if="{{badgeStats.platinum > 0}}">🏆{{badgeStats.platinum}}</text>
         </view>
         <view class="ach-summary-hint">查看全部成就 ›</view>
       </view>
-      <view class="ach-summary-icon">🏆</view>
+      <view class="ach-summary-icon">🎖️</view>
     </view>
   </c-card>
 
-  <!-- ===== 使用者模式：爱心币余额 + 充值 ===== -->
   <view wx:if="{{!isDev}}">
-    <c-card title="💖 我的爱心币">
+    <c-card title="💰 我的爱心币">
       <view class="coin-display flex-center">
         <text class="coin-big">{{coinBalance}}</text>
         <text class="coin-unit">爱心币</text>
       </view>
-      <view class="recharge-btn-full" bindtap="showRecharge">💌 申请充值</view>
-      <!-- 交易记录 -->
+      <view class="recharge-btn-full" bindtap="showRecharge">🤝 申请充值</view>
       <view wx:if="{{coinTxns.length > 0}}" class="txn-list">
         <view class="txn-item" wx:for="{{coinTxns}}" wx:key="id">
           <view class="txn-row flex-between">
-            <text class="txn-desc">{{item.type === 'add' ? '+' : '-'}}{{item.amount}} 💖 {{item.by ? 'by ' + item.by : ''}}</text>
+            <text class="txn-desc">{{item.type === 'add' ? '+' : '-'}}{{item.amount}} 💰 {{item.by ? 'by ' + item.by : ''}}</text>
             <text class="txn-time">{{item.time}}</text>
           </view>
           <view wx:if="{{item.message}}" class="txn-msg">💬 {{item.message}}</view>
@@ -84,13 +79,12 @@
     </c-card>
   </view>
 
-  <!-- ===== 开发者模式：爱心币管理 ===== -->
   <view wx:if="{{isDev}}">
-    <c-card title="💖 爱心币管理">
+    <c-card title="💰 爱心币管理">
       <view class="coin-manage">
         <view class="coin-balance-row flex-center">
           <text class="coin-balance-label">{{partnerName || '对方'}}的余额</text>
-          <text class="coin-balance-num">{{coinBalance}} 💖</text>
+          <text class="coin-balance-num">{{coinBalance}} 💰</text>
         </view>
         <view class="coin-input-row flex-row">
           <view class="coin-mode-toggle flex-row">
@@ -103,17 +97,18 @@
         <input class="coin-msg-input" placeholder="留言（可选）" value="{{coinMessage}}" bindinput="onCoinMessage" maxlength="50" />
       </view>
     </c-card>
-
   </view>
 
-  <!-- 设置 -->
   <c-card title="设置">
+    <view class="setting-item flex-between" bindtap="goWeatherSettings">
+      <text>天气设置</text>
+      <text class="set-arrow">›</text>
+    </view>
     <view class="setting-item flex-between" bindtap="editTogetherDate">
       <text>修改在一起日期</text>
       <text class="set-val">{{togetherDateStr}}</text>
       <text class="set-arrow">›</text>
     </view>
-    <!-- 双方都可修改自己的昵称 -->
     <view class="setting-item flex-between" bindtap="editMyNameFn">
       <text>修改我的昵称</text>
       <text class="set-arrow">›</text>
@@ -122,27 +117,23 @@
       <text>应用锁</text>
       <switch checked="{{lockEnabled}}" bindchange="onLockSwitch" color="#FF6B8A" />
     </view>
-    <!-- 仅开发者显示查看邀请码 -->
     <view wx:if="{{isDev}}" class="setting-item flex-between" bindtap="showInviteCode">
       <text>查看邀请码</text>
       <text class="set-arrow">›</text>
     </view>
-    <!-- 仅开发者显示重新设置 -->
     <view wx:if="{{isDev}}" class="setting-item flex-between" bindtap="resetApp">
       <text>重新设置</text>
       <text class="set-arrow">›</text>
     </view>
-    <!-- 使用者显示重新绑定 -->
     <view wx:if="{{!isDev}}" class="setting-item flex-between" bindtap="reBindApp">
       <text>重新绑定</text>
       <text class="set-arrow">›</text>
     </view>
   </c-card>
 
-  <!-- 充值弹窗（使用者） -->
   <view class="overlay" wx:if="{{showRechargeModal}}" bindtap="hideRecharge">
     <view class="modal-card" catchtap="noop">
-      <view class="modal-title">💖 申请充值</view>
+      <view class="modal-title">💰 申请充值</view>
       <view class="form-row">
         <text class="form-label">想要多少币</text>
         <input class="form-input short-input" type="number" placeholder="10" value="{{rechargeAmount}}" bindinput="onRechargeAmount" />
@@ -151,7 +142,7 @@
         <text class="form-label">用什么交换</text>
         <input class="form-input" placeholder="比如：一个抱抱、按摩一次…" value="{{rechargeItem}}" bindinput="onRechargeItem" maxlength="50" />
       </view>
-      <view class="modal-desc">对方看到后会决定是否批准 💌</view>
+      <view class="modal-desc">对方看到后会决定是否批准 🤝</view>
       <view class="modal-btns flex-row">
         <view class="mbtn cancel" bindtap="hideRecharge">取消</view>
         <view class="mbtn confirm" bindtap="sendRecharge">发送请求</view>
@@ -159,7 +150,6 @@
     </view>
   </view>
 
-  <!-- 修改在一起日期弹窗 -->
   <view class="overlay" wx:if="{{showDatePicker}}" bindtap="hideDatePicker">
     <view class="modal-card" catchtap="noop">
       <view class="modal-title">修改在一起的日子</view>
@@ -173,7 +163,6 @@
     </view>
   </view>
 
-  <!-- 修改昵称弹窗（仅编辑自己的名字） -->
   <view class="overlay" wx:if="{{showNameModal}}" bindtap="hideNameModal">
     <view class="modal-card" catchtap="noop">
       <view class="modal-title">修改我的昵称</view>
@@ -188,10 +177,9 @@
     </view>
   </view>
 
-  <!-- 页脚 -->
   <view class="footer">
-    <text>琳浪小栈 v1.0</text>
-    <text class="footer-heart">Made with 💕</text>
+    <text>玲珑小栈 v1.0</text>
+    <text class="footer-heart">Made with 💖</text>
   </view>
   <view style="height: 40rpx;"></view>
 </view>

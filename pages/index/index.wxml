@@ -15,31 +15,39 @@
 
   <!-- 天气卡片 -->
   <view class="weather-card" wx:if="{{weather}}">
-    <view class="weather-location" wx:if="{{weather.location}}">{{weather.location}}</view>
-    <view class="weather-main flex-row">
-      <view class="weather-icon">{{weather.icon}}</view>
-      <view class="weather-info">
-        <view class="weather-temp">
-          <text class="temp-now">{{weather.temp}}°</text>
-          <text class="temp-range">{{weather.minTemp}}° ~ {{weather.maxTemp}}°</text>
+    <view class="weather-title">今天的天气</view>
+    <view class="weather-partners">
+      <view class="weather-person">
+        <view class="weather-person-top">
+          <view class="weather-person-main">
+            <view class="weather-person-name">{{weather.mine.name}}</view>
+            <view class="weather-person-location">{{weather.mine.location}}</view>
+          </view>
+          <view class="weather-person-temp">{{weather.mine.hasData ? (weather.mine.icon + ' ' + weather.mine.temp + '°') : '--'}}</view>
         </view>
-        <view class="weather-text">{{weather.text}}</view>
+        <view class="weather-person-meta">
+          <view class="weather-person-range">{{weather.mine.hasData ? (weather.mine.minTemp + '° ~ ' + weather.mine.maxTemp + '°') : ''}}</view>
+          <view class="weather-person-text">{{weather.mine.text}}</view>
+        </view>
+      </view>
+      <view class="weather-divider">|</view>
+      <view class="weather-person">
+        <view class="weather-person-top">
+          <view class="weather-person-main">
+            <view class="weather-person-name">{{weather.partner.name}}</view>
+            <view class="weather-person-location">{{weather.partner.location}}</view>
+          </view>
+          <view class="weather-person-temp">{{weather.partner.hasData ? (weather.partner.icon + ' ' + weather.partner.temp + '°') : '--'}}</view>
+        </view>
+        <view class="weather-person-meta">
+          <view class="weather-person-range">{{weather.partner.hasData ? (weather.partner.minTemp + '° ~ ' + weather.partner.maxTemp + '°') : ''}}</view>
+          <view class="weather-person-text">{{weather.partner.text}}</view>
+        </view>
       </view>
     </view>
-    <view class="weather-partners flex-row">
-      <view class="partner-item">
-        <text class="partner-name">{{weather.myName || '我'}}</text>
-        <text class="partner-temp">{{weather.icon}} {{weather.temp}}°</text>
-      </view>
-      <view class="partner-divider">|</view>
-      <view class="partner-item">
-        <text class="partner-name">{{weather.partnerName || 'TA'}}</text>
-        <text class="partner-temp">{{weather.icon}} {{weather.temp}}°</text>
-      </view>
-    </view>
-    <view class="weather-clothing flex-row">
-      <text class="clothing-icon">{{weather.clothingIcon}}</text>
-      <text class="clothing-text">{{weather.clothing}}</text>
+    <view class="weather-clothing flex-row" wx:if="{{weather.mine.hasData}}">
+      <text class="clothing-icon">{{weather.mine.clothingIcon}}</text>
+      <text class="clothing-text">{{weather.mine.clothing}}</text>
     </view>
   </view>
 

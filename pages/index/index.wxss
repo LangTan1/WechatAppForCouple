@@ -61,73 +61,106 @@
   margin: 0 24rpx 16rpx;
   background: linear-gradient(135deg, #E8F4FD, #F0F8FF);
   border-radius: 20rpx;
-  padding: 20rpx 24rpx;
+  padding: 18rpx 20rpx;
   box-shadow: 0 2rpx 12rpx rgba(100, 149, 237, 0.1);
 }
 
-.weather-location {
-  font-size: 22rpx; color: #8DB4D8; margin-bottom: 10rpx; text-align: center;
-}
-
-.weather-main {
-  align-items: center; margin-bottom: 14rpx;
-}
-
-.weather-icon {
-  font-size: 52rpx;
-  margin-right: 16rpx;
-}
-
-.weather-info {
-  flex: 1;
-}
-
-.temp-now {
-  font-size: 40rpx;
-  font-weight: 700;
+.weather-title {
+  font-size: 26rpx;
+  font-weight: 600;
   color: #5B9BD5;
+  margin-bottom: 12rpx;
 }
 
-.temp-range {
-  font-size: 24rpx;
-  color: #8DB4D8;
-  margin-left: 12rpx;
-}
-
-.weather-text {
-  font-size: 24rpx;
-  color: #7BA3CC;
-  margin-top: 2rpx;
-}
-
-/* 双方天气 */
 .weather-partners {
-  justify-content: center; gap: 20rpx;
-  background: rgba(255,255,255,0.6); border-radius: 12rpx;
-  padding: 12rpx 20rpx; margin-bottom: 12rpx;
+  display: flex;
+  align-items: stretch;
+  gap: 10rpx;
+  margin-bottom: 10rpx;
 }
 
-.partner-item { text-align: center; }
-.partner-name { font-size: 24rpx; color: #5B9BD5; font-weight: 600; display: block; }
-.partner-temp { font-size: 22rpx; color: #8DB4D8; margin-top: 2rpx; display: block; }
-.partner-divider { color: #B0D0E8; font-size: 24rpx; }
+.weather-person {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.62);
+  border-radius: 14rpx;
+  padding: 14rpx 16rpx;
+}
+
+.weather-person-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10rpx;
+}
+
+.weather-person-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.weather-person-name {
+  font-size: 24rpx;
+  color: #5B9BD5;
+  font-weight: 600;
+}
+
+.weather-person-location {
+  margin-top: 4rpx;
+  font-size: 20rpx;
+  line-height: 1.35;
+  color: #7BA3CC;
+}
+
+.weather-person-temp {
+  flex-shrink: 0;
+  font-size: 28rpx;
+  color: #4C8ECB;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.weather-person-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6rpx 10rpx;
+  margin-top: 8rpx;
+}
+
+.weather-person-range {
+  font-size: 18rpx;
+  color: #8DB4D8;
+}
+
+.weather-person-text {
+  font-size: 20rpx;
+  color: #678DB5;
+  line-height: 1.35;
+}
+
+.weather-divider {
+  align-self: center;
+  color: #B0D0E8;
+  font-size: 22rpx;
+}
 
 /* 穿衣建议 */
 .weather-clothing {
   background: rgba(255,255,255,0.7);
-  border-radius: 12rpx; padding: 10rpx 20rpx;
+  border-radius: 12rpx;
+  padding: 8rpx 14rpx;
   justify-content: center;
 }
 
 .clothing-icon {
-  font-size: 28rpx;
+  font-size: 24rpx;
   margin-right: 6rpx;
 }
 
 .clothing-text {
-  font-size: 22rpx;
+  font-size: 20rpx;
   color: #666;
-  line-height: 1.4;
+  line-height: 1.3;
 }
 
 /* 纪念日提醒 */

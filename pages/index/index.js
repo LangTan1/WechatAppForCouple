@@ -39,6 +39,7 @@ Page({
       togetherDays: storage.getTogetherDays()
     });
     this.refreshData();
+    this.loadWeather();
     this._doSyncFromCloud();
     this._startPolling();
   },
@@ -70,7 +71,10 @@ Page({
     const ok = await storage.loadFromCloud();
     if (ok) {
       this.refreshData();
-      this.setData({ togetherDays: storage.getTogetherDays() });
+      this.setData({
+        togetherDays: storage.getTogetherDays(),
+        weather: weather.getWeatherDisplayData()
+      });
     } else if (hadDoc && !storage.getCoupleDocId()) {
       // 云端文档被删除（对方重置了）→ 弹窗提示
       this._stopPolling();
@@ -209,10 +213,20 @@ Page({
 
   },
 
-  loadWeather() {
-    weather.fetchWeather().then(data => {
-      this.setData({ weather: data });
-    }).catch(() => {});
+  async loadWeather() {
+    this.setData({ weather: weather.getWeatherDisplayData() });
+
+    const mySnapshot = storage.getMyWeatherSnapshot();
+    const expired = storage.isWeatherSnapshotExpired(mySnapshot, weather.WEATHER_CACHE_TTL);
+    if (!expired) return;
+
+    try {
+      await weather.refreshMyWeather();
+    } catch (e) {
+      console.error('[Index] weather refresh failed:', e);
+    }
+
+    this.setData({ weather: weather.getWeatherDisplayData() });
   },
 
   loadDailyQuote() {

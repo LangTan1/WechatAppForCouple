@@ -4,6 +4,134 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
 const couples = db.collection('couples');
 
+const ALLOWED_COUPLE_FIELDS = new Set([
+  'devName',
+  'userName',
+  'devGender',
+  'userGender',
+  'devAvatar',
+  'userAvatar',
+  'togetherDate',
+  'devCoins',
+  'userCoins',
+  'menuItems',
+  'diaries',
+  'whispers',
+  'wishes',
+  'anniversaries',
+  'albums',
+  'moods',
+  'achievements',
+  'orderQueue',
+  'foodRequests',
+  'coinRequests',
+  'orderTotalCount',
+  'coinTransactions',
+  'devWeatherProfile',
+  'userWeatherProfile',
+  'devWeatherSnapshot',
+  'userWeatherSnapshot',
+  'angry',
+  'reflection',
+  'learn',
+  'sweet',
+  'avoid'
+]);
+
+const PUBLIC_COUPLE_FIELDS = [
+  '_id',
+  'inviteCode',
+  'devName',
+  'userName',
+  'devGender',
+  'userGender',
+  'devAvatar',
+  'userAvatar',
+  'togetherDate',
+  'createdAt',
+  'updatedAt'
+];
+
+function pickFields(source, fields) {
+  const result = {};
+  if (!source) return result;
+  for (const field of fields) {
+    if (Object.prototype.hasOwnProperty.call(source, field)) {
+      result[field] = source[field];
+    }
+  }
+  return result;
+}
+
+function toPublicCouple(couple) {
+  return pickFields(couple, PUBLIC_COUPLE_FIELDS);
+}
+
+function canAccessCouple(couple, openid) {
+  if (!couple || !openid) return false;
+  return couple.devOpenid === openid || couple.userOpenid === openid;
+}
+
+function canUnbindCouple(couple, openid) {
+  if (!couple || !openid) return false;
+  return couple.devOpenid === openid;
+}
+
+function toEpoch(value) {
+  if (value == null) return 0;
+  if (typeof value === 'number') return value;
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === 'string') {
+    const parsed = Date.parse(value);
+    return Number.isNaN(parsed) ? 0 : parsed;
+  }
+  if (typeof value.getTime === 'function') return value.getTime();
+  return 0;
+}
+
+function compareCouplesForRecency(a, b) {
+  const timeB = toEpoch(b && (b.updatedAt || b.createdAt));
+  const timeA = toEpoch(a && (a.updatedAt || a.createdAt));
+  if (timeB !== timeA) return timeB - timeA;
+  const idB = String((b && b._id) || '');
+  const idA = String((a && a._id) || '');
+  return idB.localeCompare(idA);
+}
+
+function pickLatestCouple(couplesList) {
+  if (!Array.isArray(couplesList) || couplesList.length === 0) return null;
+  return couplesList.slice().sort(compareCouplesForRecency)[0];
+}
+
+function filterAllowedUpdates(updates) {
+  return pickFields(updates, Array.from(ALLOWED_COUPLE_FIELDS));
+}
+
+function sanitizeCreateDoc(docData) {
+  return filterAllowedUpdates(docData);
+}
+
+async function loadCoupleRecord(docId) {
+  try {
+    const res = await couples.doc(docId).get();
+    return res.data;
+  } catch (e) {
+    const msg = e && e.message ? e.message : '';
+    if (msg.indexOf('not exist') !== -1 || msg.indexOf('not found') !== -1) {
+      throw new Error('document not exist');
+    }
+    throw e;
+  }
+}
+
+async function requireAuthorizedCouple(docId, openid) {
+  const couple = await loadCoupleRecord(docId);
+  if (!canAccessCouple(couple, openid)) {
+    throw new Error('permission denied');
+  }
+  return couple;
+}
+
 exports.main = async (event, context) => {
   const wxContext = cloud.getWXContext();
   const openid = wxContext.OPENID;
@@ -16,11 +144,11 @@ exports.main = async (event, context) => {
       case 'bindCouple':
         return await bindCouple(event, openid);
       case 'loadCouple':
-        return await loadCouple(event);
+        return await loadCouple(event, openid);
       case 'saveField':
-        return await saveField(event);
+        return await saveField(event, openid);
       case 'saveBatch':
-        return await saveBatch(event);
+        return await saveBatch(event, openid);
       case 'findCoupleByOpenid':
         return await findCoupleByOpenid(openid);
       case 'findAllCouplesByOpenid':
@@ -28,7 +156,7 @@ exports.main = async (event, context) => {
       case 'findCoupleByCode':
         return await findCoupleByCode(event);
       case 'unbindCouple':
-        return await unbindCouple(event);
+        return await unbindCouple(event, openid);
       default:
         return { success: false, error: '未知操作: ' + action };
     }
@@ -38,28 +166,29 @@ exports.main = async (event, context) => {
   }
 };
 
-// 创建情侣文档
 async function createCouple(event, openid) {
   const { docData, inviteCode } = event;
-  docData.devOpenid = openid;
-  docData.inviteCode = inviteCode;
-  docData.createdAt = db.serverDate();
-  docData.updatedAt = db.serverDate();
+  const safeDocData = sanitizeCreateDoc(docData);
 
-  const res = await couples.add({ data: docData });
+  safeDocData.devOpenid = openid;
+  safeDocData.userOpenid = '';
+  safeDocData.inviteCode = inviteCode;
+  safeDocData.createdAt = db.serverDate();
+  safeDocData.updatedAt = db.serverDate();
+
+  const res = await couples.add({ data: safeDocData });
   return { success: true, docId: res._id, inviteCode: inviteCode };
 }
 
-// 绑定使用者到情侣文档
 async function bindCouple(event, openid) {
   const { inviteCode, userName, userGender } = event;
 
-  const res = await couples.where({ inviteCode: inviteCode }).get();
+  const res = await couples.where({ inviteCode: inviteCode }).orderBy('createdAt', 'desc').get();
   if (res.data.length === 0) {
     return { success: false, error: '邀请码不存在' };
   }
 
-  const couple = res.data[0];
+  const couple = pickLatestCouple(res.data);
   if (couple.userOpenid && couple.userOpenid !== openid) {
     return { success: false, error: '该邀请码已被其他人绑定' };
   }
@@ -70,69 +199,87 @@ async function bindCouple(event, openid) {
 
   await couples.doc(couple._id).update({ data: updateData });
 
-  // 返回更新后的完整文档
-  couple.userOpenid = openid;
-  if (userName) couple.userName = userName;
-  if (userGender) couple.userGender = userGender;
-
-  return { success: true, docId: couple._id, couple: couple };
+  // 用户已绑定成功，是授权参与者，返回完整文档供 _syncCloudToLocal 同步业务数据
+  const updated = await loadCoupleRecord(couple._id);
+  return { success: true, docId: couple._id, couple: updated };
 }
 
-// 加载情侣文档
-async function loadCouple(event) {
+async function loadCouple(event, openid) {
   const { docId } = event;
-  const res = await couples.doc(docId).get();
-  return { success: true, data: res.data };
+  const couple = await requireAuthorizedCouple(docId, openid);
+  return { success: true, data: couple };
 }
 
-// 保存单个字段
-async function saveField(event) {
+async function saveField(event, openid) {
   const { docId, cloudField, value } = event;
+  if (!ALLOWED_COUPLE_FIELDS.has(cloudField)) {
+    throw new Error('invalid field');
+  }
+
+  await requireAuthorizedCouple(docId, openid);
+
   const updateData = { updatedAt: db.serverDate() };
   updateData[cloudField] = value;
   await couples.doc(docId).update({ data: updateData });
   return { success: true };
 }
 
-// 批量保存字段
-async function saveBatch(event) {
+async function saveBatch(event, openid) {
   const { docId, updates } = event;
+  const safeUpdates = filterAllowedUpdates(updates);
+
+  await requireAuthorizedCouple(docId, openid);
+
+  if (Object.keys(safeUpdates).length === 0) {
+    return { success: true };
+  }
+
   const updateData = { updatedAt: db.serverDate() };
-  for (const key in updates) {
-    updateData[key] = updates[key];
+  for (const key in safeUpdates) {
+    updateData[key] = safeUpdates[key];
   }
   await couples.doc(docId).update({ data: updateData });
   return { success: true };
 }
 
-// 按开发者openid查找情侣文档
 async function findCoupleByOpenid(openid) {
-  const res = await couples.where({ devOpenid: openid }).get();
-  if (res.data.length > 0) {
-    return { success: true, couple: res.data[0] };
+  const res = await couples.where({ devOpenid: openid }).orderBy('createdAt', 'desc').get();
+  const couple = pickLatestCouple(res.data);
+  if (couple) {
+    return { success: true, couple: toPublicCouple(couple) };
   }
   return { success: false, error: '未找到情侣文档' };
 }
 
-// 按开发者openid查找所有情侣文档（用于找回旧空间）
 async function findAllCouplesByOpenid(openid) {
   const res = await couples.where({ devOpenid: openid }).orderBy('createdAt', 'desc').get();
-  return { success: true, couples: res.data };
+  return { success: true, couples: res.data.map(toPublicCouple) };
 }
 
-// 按邀请码查找情侣文档（不修改文档，仅查询）
 async function findCoupleByCode(event) {
   const { inviteCode } = event;
-  const res = await couples.where({ inviteCode: inviteCode }).get();
-  if (res.data.length > 0) {
-    return { success: true, couple: res.data[0] };
+  const res = await couples.where({ inviteCode: inviteCode }).orderBy('createdAt', 'desc').get();
+  const couple = pickLatestCouple(res.data);
+  if (couple) {
+    return { success: true, couple: toPublicCouple(couple) };
   }
   return { success: false, error: '邀请码不存在' };
 }
 
-// 解绑（删除文档）
-async function unbindCouple(event) {
+async function unbindCouple(event, openid) {
   const { docId } = event;
+  const couple = await requireAuthorizedCouple(docId, openid);
+  if (!canUnbindCouple(couple, openid)) {
+    throw new Error('permission denied');
+  }
   await couples.doc(docId).remove();
   return { success: true };
 }
+
+exports.__test__ = {
+  canAccessCouple,
+  canUnbindCouple,
+  pickLatestCouple,
+  filterAllowedUpdates,
+  toPublicCouple
+};

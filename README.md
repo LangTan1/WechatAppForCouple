@@ -6,7 +6,7 @@
 
 | 模块 | 功能 |
 |------|------|
-| **首页** | 在一起天数、实时天气（和风天气API）+ 穿衣建议、每日情话、心情卡片、纪念日倒计时、消息红点提醒 |
+| **首页** | 在一起天数、双人独立天气（和风天气API）+ 穿衣建议、每日情话、心情卡片、纪念日倒计时、消息红点提醒 |
 | **商城** | 三级分类（食品/水果/情侣互动）、爱心币点餐、帮我决定（随机选择）、许愿、订单管理 |
 | **记录** | 恋爱日记、悄悄话（气泡聊天）、时光相册（云存储+评论+缩放预览）、心情打卡、愿望清单、气气本、醒醒贴、学学好、甜甜记、避雷贴 |
 | **我的** | 情侣头像、昵称管理、爱心币余额+交易记录、恋爱成就、纪念日管理、设置、查看邀请码（开发者） |
@@ -22,6 +22,7 @@
 - 微信云开发（环境 `cloud1-d0gzs51l9cbf4b9bc`），NoSQL 数据库单文档存储
 - **所有跨设备数据库操作通过云函数 `coupleOps` 执行**（管理员权限，绕过安全规则）
 - openid 从服务端获取，不依赖客户端传参，更安全可靠
+- 云函数权限校验：访问控制（验证调用者属于目标 couple）、字段白名单、删除权限仅限开发者
 - 创建者输入密钥 → 设置信息 → 生成 6 位邀请码
 - 加入者输入邀请码 → 绑定成功 → 双端数据实时同步
 - 首页/商城每 5 秒、悄悄话每 3 秒自动轮询同步
@@ -48,8 +49,10 @@
 - 本地存储（wx.Storage）+ 微信云开发（NoSQL 数据库同步）
 - 跨设备数据库操作通过云函数 `coupleOps` 执行（管理员权限，openid 从服务端获取）
 - 头像和相册照片上传到微信云存储，通过 `getTempFileURL` 转为 HTTP URL 实现跨用户访问
+- 图片同步分层：持久化层保留 `cloud://` fileID，展示层使用临时 URL，防止临时 URL 回写污染云端
 - 基础库 3.15.2，`es6: false`（关闭 Babel 转译）
-- 实时天气使用和风天气API（utils/weather.js），需配置API Key和API Host
+- 双人独立天气：双方各自维护天气 profile 和 snapshot，按角色同步（和风天气API）
+- 天气设置独立二级页：支持自动定位和手动区县设置
 - 已申请 `wx.getFuzzyLocation` 权限用于获取位置
 - 300 句每日随机情话（utils/love-quotes.js）
 
@@ -96,6 +99,7 @@ git clone https://github.com/LangTan1/WechatAppForCouple.git
     ├── menu/       # 商城（双模式：使用者购物 / 开发者管理）
     ├── record/     # 记录入口（日记 / 悄悄话 / 相册 / 心情 / 更多）
     ├── profile/    # 我的：头像 + 信息 + 爱心币 + 成就 + 设置
+    ├── weather-settings/ # 天气设置（自动定位 / 手动区县）
     ├── diary/      # 恋爱日记
     ├── whisper/    # 悄悄话（气泡聊天，3 秒轮询）
     ├── album/      # 时光相册（云存储 + 评论 + 缩放预览）
@@ -178,3 +182,28 @@ git clone https://github.com/LangTan1/WechatAppForCouple.git
 ### v1.0 — 初始版本
 - 基础功能：首页 / 菜单 / 日记 / 悄悄话 / 相册 / 纪念日 / 愿望清单
 - 双角色体系 + 爱心币系统
+
+### v5.0 — 双人天气与区县位置
+- 首页天气升级为”我 / TA”双人独立展示
+- 优先使用当前位置获取区县级天气
+- 定位失败时自动回退到手动设置的区县位置
+- 我的天气按 1 小时缓存刷新，对方天气展示 TA 最近一次同步结果
+- 资料页新增天气位置设置入口，支持”使用当前位置”和”手动设置区县”
+
+### v5.5 — 天气设置页拆分 + 图片同步修复 + 云函数安全加固
+- **天气设置页拆分**：将资料页内联天气设置拆分为独立二级页 `pages/weather-settings`
+  - “我的”页新增”天气设置”入口
+  - 支持自动定位和手动区县两种模式
+  - 天气 profile 和 snapshot 按角色独立同步
+- **图片同步修复**：解决头像和相册照片对方看不见的问题
+  - 持久化层只保存 `cloud://` fileID，展示层使用临时 URL
+  - 新增头像展示缓存（`my_avatar_temp_url` / `partner_avatar_temp_url`）和文件 URL 缓存
+  - 相册 `getAlbums()` 返回展示数据，`setAlbums()` 写入前自动净化为 canonical 数据
+  - 头像 setter 兜底保护：即使传入临时 URL 也不会覆盖已有 cloud fileID
+  - `saveToCloud` / `saveBatchToCloud` 写入前统一做 canonical 化处理
+- **云函数安全加固**：`coupleOps` 增加多层权限校验
+  - `loadCouple` / `saveField` / `saveBatch` 验证调用者属于目标 couple
+  - `unbindCouple` 仅允许开发者角色执行
+  - `saveField` / `saveBatch` 使用字段白名单，阻止写入 `devOpenid` 等敏感字段
+  - `findCoupleByCode` / `findCoupleByOpenid` / `findAllCouplesByOpenid` 仅返回公开字段
+  - `createCouple` 对传入数据做 sanitize，防止注入额外字段

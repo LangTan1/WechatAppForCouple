@@ -38,6 +38,10 @@ function _myAvatarCloudField() { return isDeveloper() ? 'devAvatar' : 'userAvata
 function _partnerAvatarCloudField() { return isDeveloper() ? 'userAvatar' : 'devAvatar'; }
 function _myGenderCloudField() { return isDeveloper() ? 'devGender' : 'userGender'; }
 function _partnerGenderCloudField() { return isDeveloper() ? 'userGender' : 'devGender'; }
+function _myWeatherProfileCloudField() { return isDeveloper() ? 'devWeatherProfile' : 'userWeatherProfile'; }
+function _partnerWeatherProfileCloudField() { return isDeveloper() ? 'userWeatherProfile' : 'devWeatherProfile'; }
+function _myWeatherSnapshotCloudField() { return isDeveloper() ? 'devWeatherSnapshot' : 'userWeatherSnapshot'; }
+function _partnerWeatherSnapshotCloudField() { return isDeveloper() ? 'userWeatherSnapshot' : 'devWeatherSnapshot'; }
 function _getCloudFieldFor(storageKey) {
   if (storageKey === 'my_name') return _myNameCloudField();
   if (storageKey === 'partner_name') return _partnerNameCloudField();
@@ -45,6 +49,10 @@ function _getCloudFieldFor(storageKey) {
   if (storageKey === 'partner_avatar') return _partnerAvatarCloudField();
   if (storageKey === 'my_gender') return _myGenderCloudField();
   if (storageKey === 'partner_gender') return _partnerGenderCloudField();
+  if (storageKey === 'my_weather_profile') return _myWeatherProfileCloudField();
+  if (storageKey === 'partner_weather_profile') return _partnerWeatherProfileCloudField();
+  if (storageKey === 'my_weather_snapshot') return _myWeatherSnapshotCloudField();
+  if (storageKey === 'partner_weather_snapshot') return _partnerWeatherSnapshotCloudField();
   return CLOUD_FIELDS[storageKey];
 }
 
@@ -57,8 +65,14 @@ const STORAGE_KEYS = {
   PARTNER_NAME: 'partner_name',
   MY_AVATAR: 'my_avatar',
   PARTNER_AVATAR: 'partner_avatar',
+  MY_AVATAR_TEMP_URL: 'my_avatar_temp_url',
+  PARTNER_AVATAR_TEMP_URL: 'partner_avatar_temp_url',
   MY_GENDER: 'my_gender',
   PARTNER_GENDER: 'partner_gender',
+  MY_WEATHER_PROFILE: 'my_weather_profile',
+  PARTNER_WEATHER_PROFILE: 'partner_weather_profile',
+  MY_WEATHER_SNAPSHOT: 'my_weather_snapshot',
+  PARTNER_WEATHER_SNAPSHOT: 'partner_weather_snapshot',
   BOY_COINS: 'boy_coins',
   GIRL_COINS: 'girl_coins',
   MENU_ITEMS: 'custom_menu_items',
@@ -72,6 +86,7 @@ const STORAGE_KEYS = {
   LOCK_ENABLED: 'lock_enabled',
   LOCK_PIN: 'lock_pin',
   WEATHER_CACHE: 'weather_cache',
+  FILE_URL_CACHE: 'cloud_file_url_cache',
   CURRENT_ROLE: 'current_role',
   LAST_ROLE: 'last_role',
   ORDER_QUEUE: 'order_queue',
@@ -89,6 +104,157 @@ const STORAGE_KEYS = {
   AVOID: 'custom_avoid'
 };
 
+function _isCloudFileID(value) {
+  return typeof value === 'string' && value.indexOf('cloud://') === 0;
+}
+
+function _isHttpUrl(value) {
+  return typeof value === 'string' && /^https?:\/\//.test(value);
+}
+
+function _clone(value) {
+  if (value === undefined) return undefined;
+  return JSON.parse(JSON.stringify(value));
+}
+
+function _getAvatarTempStorageKey(storageKey) {
+  if (storageKey === STORAGE_KEYS.MY_AVATAR) return STORAGE_KEYS.MY_AVATAR_TEMP_URL;
+  if (storageKey === STORAGE_KEYS.PARTNER_AVATAR) return STORAGE_KEYS.PARTNER_AVATAR_TEMP_URL;
+  return '';
+}
+
+function _setAvatarDisplayUrl(storageKey, url) {
+  var tempKey = _getAvatarTempStorageKey(storageKey);
+  if (!tempKey) return;
+  try {
+    if (url) wx.setStorageSync(tempKey, url);
+    else wx.removeStorageSync(tempKey);
+  } catch (e) {}
+}
+
+function _getAvatarDisplayValue(storageKey) {
+  var canonical = get(storageKey, '');
+  var tempKey = _getAvatarTempStorageKey(storageKey);
+  var tempUrl = tempKey ? get(tempKey, '') : '';
+  if (_isCloudFileID(canonical) && tempUrl) return tempUrl;
+  return canonical || tempUrl;
+}
+
+function _getFileUrlCache() {
+  return get(STORAGE_KEYS.FILE_URL_CACHE, {});
+}
+
+function _setFileUrlCache(cache) {
+  try {
+    wx.setStorageSync(STORAGE_KEYS.FILE_URL_CACHE, cache || {});
+  } catch (e) {}
+}
+
+function _mergeFileUrlCache(urlMap) {
+  if (!urlMap || Object.keys(urlMap).length === 0) return;
+  var cache = _getFileUrlCache();
+  var merged = Object.assign({}, cache, urlMap);
+  _setFileUrlCache(merged);
+}
+
+function _getDisplayUrlByFileID(fileID, fallback) {
+  if (!_isCloudFileID(fileID)) return fallback || fileID || '';
+  var cache = _getFileUrlCache();
+  return cache[fileID] || fallback || fileID;
+}
+
+function _normalizeAvatarValue(nextValue, currentValue) {
+  if (_isCloudFileID(nextValue) || !nextValue) return nextValue;
+  if (_isCloudFileID(currentValue)) return currentValue;
+  return nextValue;
+}
+
+function _sanitizePhotoForStorage(photo) {
+  var nextPhoto = Object.assign({}, photo);
+  var canonicalFileID = _isCloudFileID(nextPhoto.fileID) ? nextPhoto.fileID
+    : _isCloudFileID(nextPhoto.url) ? nextPhoto.url : '';
+
+  if (canonicalFileID) {
+    nextPhoto.fileID = canonicalFileID;
+    nextPhoto.url = canonicalFileID;
+  }
+
+  return nextPhoto;
+}
+
+function _sanitizeAlbumCoverForStorage(cover, photos) {
+  if (_isCloudFileID(cover) || !cover) return cover || '';
+
+  if (_isHttpUrl(cover) && photos && photos.length > 0) {
+    for (var i = 0; i < photos.length; i++) {
+      var photo = photos[i];
+      if (!photo) continue;
+      if ((photo.url === cover || photo.fileID === cover) && _isCloudFileID(photo.fileID)) {
+        return photo.fileID;
+      }
+    }
+
+    var firstPhoto = photos[0];
+    if (firstPhoto) {
+      if (_isCloudFileID(firstPhoto.fileID)) return firstPhoto.fileID;
+      if (_isCloudFileID(firstPhoto.url)) return firstPhoto.url;
+    }
+  }
+
+  return cover;
+}
+
+function _sanitizeAlbumsForStorage(albums) {
+  if (!Array.isArray(albums)) return [];
+
+  return albums.map(function(album) {
+    var nextAlbum = Object.assign({}, album);
+    var photos = Array.isArray(album.photos) ? album.photos.map(_sanitizePhotoForStorage) : [];
+    nextAlbum.photos = photos;
+    nextAlbum.cover = _sanitizeAlbumCoverForStorage(album.cover, photos);
+    return nextAlbum;
+  });
+}
+
+function _buildDisplayAlbums(albums) {
+  if (!Array.isArray(albums)) return [];
+
+  return albums.map(function(album) {
+    var nextAlbum = Object.assign({}, _clone(album));
+    var photos = Array.isArray(album.photos) ? album.photos.map(function(photo) {
+      var nextPhoto = Object.assign({}, photo);
+      var canonicalFileID = _isCloudFileID(nextPhoto.fileID) ? nextPhoto.fileID
+        : _isCloudFileID(nextPhoto.url) ? nextPhoto.url : '';
+
+      if (canonicalFileID) {
+        nextPhoto.url = _getDisplayUrlByFileID(canonicalFileID, nextPhoto.url);
+      }
+      return nextPhoto;
+    }) : [];
+
+    nextAlbum.photos = photos;
+
+    if (nextAlbum.cover) {
+      nextAlbum.cover = _getDisplayUrlByFileID(nextAlbum.cover, nextAlbum.cover);
+    } else if (photos.length > 0) {
+      nextAlbum.cover = photos[0].url || '';
+    }
+
+    return nextAlbum;
+  });
+}
+
+function _getCanonicalCloudValue(storageKey, value) {
+  if (storageKey === STORAGE_KEYS.MY_AVATAR || storageKey === STORAGE_KEYS.PARTNER_AVATAR) {
+    var currentValue = get(storageKey, '');
+    return _normalizeAvatarValue(value, currentValue);
+  }
+  if (storageKey === STORAGE_KEYS.ALBUM) {
+    return _sanitizeAlbumsForStorage(value);
+  }
+  return value;
+}
+
 function get(key, defaultValue) {
   try {
     const val = wx.getStorageSync(key);
@@ -101,12 +267,13 @@ function get(key, defaultValue) {
 function set(key, value) {
   try {
     wx.setStorageSync(key, value);
+    const cloudField = _getCloudFieldFor(key);
     // 自动同步到云端（排除从云端同步下来的场景，避免回环）
     // 名字/头像字段单独处理，不走静态映射
     if (!_syncingFromCloud && key !== 'my_name' && key !== 'partner_name'
         && key !== 'my_avatar' && key !== 'partner_avatar'
-        && key !== 'my_gender' && key !== 'partner_gender' && CLOUD_FIELDS[key]) {
-      console.log('[set] auto-sync triggered for key:', key, '→ cloud field:', CLOUD_FIELDS[key]);
+        && key !== 'my_gender' && key !== 'partner_gender' && cloudField) {
+      console.log('[set] auto-sync triggered for key:', key, '→ cloud field:', cloudField);
       saveToCloud(key, value).then(function() {
         console.log('[set] sync OK for key:', key);
       }).catch(function(e) {
@@ -164,18 +331,22 @@ function setPartnerName(name) {
 }
 
 // ---- 头像 ----
-function getMyAvatar() { return get(STORAGE_KEYS.MY_AVATAR, ''); }
+function getMyAvatar() { return _getAvatarDisplayValue(STORAGE_KEYS.MY_AVATAR); }
 function setMyAvatar(path) {
-  set(STORAGE_KEYS.MY_AVATAR, path);
+  var canonicalPath = _getCanonicalCloudValue(STORAGE_KEYS.MY_AVATAR, path);
+  set(STORAGE_KEYS.MY_AVATAR, canonicalPath);
+  if (_isCloudFileID(canonicalPath) || !canonicalPath) _setAvatarDisplayUrl(STORAGE_KEYS.MY_AVATAR, '');
   if (!_syncingFromCloud) {
-    saveToCloud(STORAGE_KEYS.MY_AVATAR, path).catch(function(e) { console.error('Auto sync error:', e); });
+    saveToCloud(STORAGE_KEYS.MY_AVATAR, canonicalPath).catch(function(e) { console.error('Auto sync error:', e); });
   }
 }
-function getPartnerAvatar() { return get(STORAGE_KEYS.PARTNER_AVATAR, ''); }
+function getPartnerAvatar() { return _getAvatarDisplayValue(STORAGE_KEYS.PARTNER_AVATAR); }
 function setPartnerAvatar(path) {
-  set(STORAGE_KEYS.PARTNER_AVATAR, path);
+  var canonicalPath = _getCanonicalCloudValue(STORAGE_KEYS.PARTNER_AVATAR, path);
+  set(STORAGE_KEYS.PARTNER_AVATAR, canonicalPath);
+  if (_isCloudFileID(canonicalPath) || !canonicalPath) _setAvatarDisplayUrl(STORAGE_KEYS.PARTNER_AVATAR, '');
   if (!_syncingFromCloud) {
-    saveToCloud(STORAGE_KEYS.PARTNER_AVATAR, path).catch(function(e) { console.error('Auto sync error:', e); });
+    saveToCloud(STORAGE_KEYS.PARTNER_AVATAR, canonicalPath).catch(function(e) { console.error('Auto sync error:', e); });
   }
 }
 
@@ -196,6 +367,20 @@ function setPartnerGender(gender) {
 }
 
 // 根据性别获取默认头像emoji
+function getMyWeatherProfile() { return get(STORAGE_KEYS.MY_WEATHER_PROFILE, null); }
+function setMyWeatherProfile(profile) { set(STORAGE_KEYS.MY_WEATHER_PROFILE, profile); }
+function getPartnerWeatherProfile() { return get(STORAGE_KEYS.PARTNER_WEATHER_PROFILE, null); }
+function setPartnerWeatherProfile(profile) { set(STORAGE_KEYS.PARTNER_WEATHER_PROFILE, profile); }
+function getMyWeatherSnapshot() { return get(STORAGE_KEYS.MY_WEATHER_SNAPSHOT, null); }
+function setMyWeatherSnapshot(snapshot) { set(STORAGE_KEYS.MY_WEATHER_SNAPSHOT, snapshot); }
+function getPartnerWeatherSnapshot() { return get(STORAGE_KEYS.PARTNER_WEATHER_SNAPSHOT, null); }
+function setPartnerWeatherSnapshot(snapshot) { set(STORAGE_KEYS.PARTNER_WEATHER_SNAPSHOT, snapshot); }
+function isWeatherSnapshotExpired(snapshot, ttl) {
+  const effectiveTtl = typeof ttl === 'number' ? ttl : 60 * 60 * 1000;
+  if (!snapshot || !snapshot.updatedAt) return true;
+  return Date.now() - snapshot.updatedAt > effectiveTtl;
+}
+
 function getDefaultAvatar(gender) {
   if (gender === 'male') return '🧑';
   if (gender === 'female') return '👩';
@@ -308,11 +493,11 @@ function getAlbums() {
   if (albums.length > 0 && !albums[0].photos) {
     const oldPhotos = albums;
     setAlbums([{ id: 1, name: '默认相册', desc: '我们的回忆', cover: '', photos: oldPhotos }]);
-    return get(STORAGE_KEYS.ALBUM, []);
+    return _buildDisplayAlbums(get(STORAGE_KEYS.ALBUM, []));
   }
-  return albums;
+  return _buildDisplayAlbums(albums);
 }
-function setAlbums(list) { set(STORAGE_KEYS.ALBUM, list); }
+function setAlbums(list) { set(STORAGE_KEYS.ALBUM, _sanitizeAlbumsForStorage(list)); }
 function getAlbumPhotos() {
   const albums = getAlbums();
   const allPhotos = [];
@@ -706,21 +891,37 @@ function _syncCloudToLocal(data) {
   if (isDev) {
     // dev端：对方是user
     if (data.userName) set(STORAGE_KEYS.PARTNER_NAME, data.userName);
-    if (data.userAvatar !== undefined) set(STORAGE_KEYS.PARTNER_AVATAR, data.userAvatar);
+    if (data.userAvatar !== undefined) {
+      set(STORAGE_KEYS.PARTNER_AVATAR, _normalizeAvatarValue(data.userAvatar, get(STORAGE_KEYS.PARTNER_AVATAR, '')));
+    }
     if (data.userGender) set(STORAGE_KEYS.PARTNER_GENDER, data.userGender);
     // 首次绑定时本地还没有名字，才从云端同步自己的
     if (!getMyName() && data.devName) set(STORAGE_KEYS.MY_NAME, data.devName);
-    if (!getMyAvatar() && data.devAvatar !== undefined) set(STORAGE_KEYS.MY_AVATAR, data.devAvatar);
+    if (!get(STORAGE_KEYS.MY_AVATAR, '') && data.devAvatar !== undefined) {
+      set(STORAGE_KEYS.MY_AVATAR, _normalizeAvatarValue(data.devAvatar, get(STORAGE_KEYS.MY_AVATAR, '')));
+    }
     if (!getMyGender() && data.devGender) set(STORAGE_KEYS.MY_GENDER, data.devGender);
+    if (data.devWeatherProfile !== undefined) set(STORAGE_KEYS.MY_WEATHER_PROFILE, data.devWeatherProfile);
+    if (data.userWeatherProfile !== undefined) set(STORAGE_KEYS.PARTNER_WEATHER_PROFILE, data.userWeatherProfile);
+    if (data.devWeatherSnapshot !== undefined) set(STORAGE_KEYS.MY_WEATHER_SNAPSHOT, data.devWeatherSnapshot);
+    if (data.userWeatherSnapshot !== undefined) set(STORAGE_KEYS.PARTNER_WEATHER_SNAPSHOT, data.userWeatherSnapshot);
   } else {
     // user端：对方是dev
     if (data.devName) set(STORAGE_KEYS.PARTNER_NAME, data.devName);
-    if (data.devAvatar !== undefined) set(STORAGE_KEYS.PARTNER_AVATAR, data.devAvatar);
+    if (data.devAvatar !== undefined) {
+      set(STORAGE_KEYS.PARTNER_AVATAR, _normalizeAvatarValue(data.devAvatar, get(STORAGE_KEYS.PARTNER_AVATAR, '')));
+    }
     if (data.devGender) set(STORAGE_KEYS.PARTNER_GENDER, data.devGender);
     // 首次绑定时本地还没有名字，才从云端同步自己的
     if (!getMyName() && data.userName) set(STORAGE_KEYS.MY_NAME, data.userName);
-    if (!getMyAvatar() && data.userAvatar !== undefined) set(STORAGE_KEYS.MY_AVATAR, data.userAvatar);
+    if (!get(STORAGE_KEYS.MY_AVATAR, '') && data.userAvatar !== undefined) {
+      set(STORAGE_KEYS.MY_AVATAR, _normalizeAvatarValue(data.userAvatar, get(STORAGE_KEYS.MY_AVATAR, '')));
+    }
     if (!getMyGender() && data.userGender) set(STORAGE_KEYS.MY_GENDER, data.userGender);
+    if (data.userWeatherProfile !== undefined) set(STORAGE_KEYS.MY_WEATHER_PROFILE, data.userWeatherProfile);
+    if (data.devWeatherProfile !== undefined) set(STORAGE_KEYS.PARTNER_WEATHER_PROFILE, data.devWeatherProfile);
+    if (data.userWeatherSnapshot !== undefined) set(STORAGE_KEYS.MY_WEATHER_SNAPSHOT, data.userWeatherSnapshot);
+    if (data.devWeatherSnapshot !== undefined) set(STORAGE_KEYS.PARTNER_WEATHER_SNAPSHOT, data.devWeatherSnapshot);
   }
 
   if (data.devCoins !== undefined) set(STORAGE_KEYS.BOY_COINS, data.devCoins);
@@ -730,7 +931,7 @@ function _syncCloudToLocal(data) {
   if (data.whispers) set(STORAGE_KEYS.WHISPERS, data.whispers);
   if (data.wishes) set(STORAGE_KEYS.WISHES, data.wishes);
   if (data.anniversaries) set(STORAGE_KEYS.ANNIVERSARIES, data.anniversaries);
-  if (data.albums) set(STORAGE_KEYS.ALBUM, data.albums);
+  if (data.albums) set(STORAGE_KEYS.ALBUM, _sanitizeAlbumsForStorage(data.albums));
   if (data.moods) set(STORAGE_KEYS.MOODS, data.moods);
   if (data.achievements) set(STORAGE_KEYS.ACHIEVEMENTS, data.achievements);
   if (data.orderQueue) set(STORAGE_KEYS.ORDER_QUEUE, data.orderQueue);
@@ -775,6 +976,9 @@ function _resolveCloudFileIDs(data) {
   var albums = data.albums;
   if (albums && Array.isArray(albums)) {
     for (var i = 0; i < albums.length; i++) {
+      if (_isCloudFileID(albums[i].cover) && fileIDs.indexOf(albums[i].cover) === -1) {
+        fileIDs.push(albums[i].cover);
+      }
       var photos = albums[i].photos;
       if (!photos || !Array.isArray(photos)) continue;
       for (var j = 0; j < photos.length; j++) {
@@ -824,9 +1028,7 @@ function _resolveCloudFileIDs(data) {
         // 更新对方头像
         if (avatarFileID && urlMap[avatarFileID]) {
           console.log('[resolve] updating partner avatar:', urlMap[avatarFileID].substring(0, 80));
-          _syncingFromCloud = true;
-          try { wx.setStorageSync(STORAGE_KEYS.PARTNER_AVATAR, urlMap[avatarFileID]); } catch (e) {}
-          _syncingFromCloud = false;
+          _setAvatarDisplayUrl(STORAGE_KEYS.PARTNER_AVATAR, urlMap[avatarFileID]);
         } else if (avatarFileID) {
           console.warn('[resolve] partner avatar fileID not resolved:', avatarFileID);
         }
@@ -834,39 +1036,13 @@ function _resolveCloudFileIDs(data) {
         // 更新自己的头像
         if (myAvatarFileID && urlMap[myAvatarFileID]) {
           console.log('[resolve] updating my avatar:', urlMap[myAvatarFileID].substring(0, 80));
-          _syncingFromCloud = true;
-          try { wx.setStorageSync(STORAGE_KEYS.MY_AVATAR, urlMap[myAvatarFileID]); } catch (e) {}
-          _syncingFromCloud = false;
+          _setAvatarDisplayUrl(STORAGE_KEYS.MY_AVATAR, urlMap[myAvatarFileID]);
         }
 
         // 更新相册照片URL
         if (albums && Array.isArray(albums)) {
-          var albumChanged = false;
-          for (var i = 0; i < albums.length; i++) {
-            var photos = albums[i].photos;
-            if (!photos || !Array.isArray(photos)) continue;
-            for (var j = 0; j < photos.length; j++) {
-              var photo = photos[j];
-              if (!photo) continue;
-              var currentUrl = photo.url || '';
-              var fid = photo.fileID || '';
-              var matchedFileID = (currentUrl.indexOf('cloud://') === 0) ? currentUrl
-                : (fid.indexOf('cloud://') === 0) ? fid : null;
-              if (matchedFileID && urlMap[matchedFileID]) {
-                albums[i].photos[j].url = urlMap[matchedFileID];
-                albumChanged = true;
-                console.log('[resolve] photo[' + i + '][' + j + '] resolved:', urlMap[matchedFileID].substring(0, 80));
-              } else if (matchedFileID) {
-                console.warn('[resolve] photo[' + i + '][' + j + '] NOT resolved, fileID:', matchedFileID);
-              }
-            }
-          }
-          if (albumChanged) {
-            _syncingFromCloud = true;
-            try { wx.setStorageSync(STORAGE_KEYS.ALBUM, albums); } catch (e) {}
-            _syncingFromCloud = false;
-            console.log('[resolve] albums updated in storage');
-          }
+          _mergeFileUrlCache(urlMap);
+          console.log('[resolve] file URL cache updated');
         }
 
         _syncingFromCloud = false;
@@ -899,7 +1075,12 @@ async function saveToCloud(storageKey, value) {
   try {
     const res = await wx.cloud.callFunction({
       name: 'coupleOps',
-      data: { action: 'saveField', docId: docId, cloudField: cloudField, value: value }
+      data: {
+        action: 'saveField',
+        docId: docId,
+        cloudField: cloudField,
+        value: _getCanonicalCloudValue(storageKey, value)
+      }
     });
     console.log('[saveToCloud] result:', JSON.stringify(res.result));
   } catch (e) {
@@ -915,7 +1096,7 @@ async function saveBatchToCloud(updates) {
   const cloudUpdates = {};
   for (const key in updates) {
     const cloudField = _getCloudFieldFor(key);
-    if (cloudField) cloudUpdates[cloudField] = updates[key];
+    if (cloudField) cloudUpdates[cloudField] = _getCanonicalCloudValue(key, updates[key]);
   }
 
   try {
@@ -955,6 +1136,9 @@ module.exports = {
   getMyName, setMyName, getPartnerName, setPartnerName,
   getMyAvatar, setMyAvatar, getPartnerAvatar, setPartnerAvatar,
   getMyGender, setMyGender, getPartnerGender, setPartnerGender, getDefaultAvatar,
+  getMyWeatherProfile, setMyWeatherProfile, getPartnerWeatherProfile, setPartnerWeatherProfile,
+  getMyWeatherSnapshot, setMyWeatherSnapshot, getPartnerWeatherSnapshot, setPartnerWeatherSnapshot,
+  isWeatherSnapshotExpired,
   getBoyCoins, setBoyCoins, getGirlCoins, setGirlCoins,
   getMyCoins, setMyCoins,
   getMenuItems, setMenuItems,
