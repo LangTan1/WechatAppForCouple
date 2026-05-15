@@ -73,15 +73,6 @@ function getLocation() {
       return;
     }
 
-    if (typeof wx.getLocation === 'function') {
-      wx.getLocation({
-        type: 'wgs84',
-        success: onSuccess,
-        fail: onFail
-      });
-      return;
-    }
-
     reject(new Error('location api unavailable'));
   });
 }
