@@ -67,7 +67,7 @@ Page({
   noop() {},
 
   async syncFromCloud() {
-    await storage.loadFromCloud();
+    try { await storage.loadFromCloud(); } catch (e) { console.error('[diary] loadFromCloud failed:', e); }
     this.loadDiaries();
   }
 });

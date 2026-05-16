@@ -179,6 +179,10 @@ function _sanitizePhotoForStorage(photo) {
     nextPhoto.url = canonicalFileID;
   }
 
+  if (nextPhoto.displayUrl) {
+    delete nextPhoto.displayUrl;
+  }
+
   return nextPhoto;
 }
 
@@ -953,7 +957,7 @@ function _syncCloudToLocal(data) {
 
 // 将所有cloud fileID转为临时HTTP URL，使<image>可直接加载
 // 返回Promise，调方可await确保URL已解析
-function _resolveCloudFileIDs(data) {
+async function _resolveCloudFileIDs(data) {
   var fileIDs = [];
   var avatarFileID = null;
 
@@ -997,19 +1001,26 @@ function _resolveCloudFileIDs(data) {
   console.log('[resolve] cloud data:', JSON.stringify(data).substring(0, 300));
   console.log('[resolve] fileIDs to resolve:', fileIDs.length, fileIDs);
 
-  if (fileIDs.length === 0) return Promise.resolve();
+  if (fileIDs.length === 0) return;
 
   // 保持_syncingFromCloud=true，防止HTTP URL通过set()回传云端覆盖原始cloud fileID
   _syncingFromCloud = true;
 
   return new Promise(function(resolve) {
-    wx.cloud.getTempFileURL({
-      fileList: fileIDs,
+    wx.cloud.callFunction({
+      name: 'coupleOps',
+      data: {
+        action: 'resolveFileURLs',
+        docId: getCoupleDocId(),
+        fileIDs: fileIDs
+      },
       success: function(res) {
-        console.log('[resolve] getTempFileURL result:', JSON.stringify(res).substring(0, 500));
+        var result = res && res.result ? res.result : {};
+        console.log('[resolve] resolveFileURLs result:', JSON.stringify(result).substring(0, 500));
+        res = result;
 
         if (!res.fileList || res.fileList.length === 0) {
-          console.error('[resolve] getTempFileURL returned empty fileList');
+          console.error('[resolve] resolveFileURLs returned empty fileList');
           _syncingFromCloud = false;
           resolve(); return;
         }
@@ -1049,7 +1060,7 @@ function _resolveCloudFileIDs(data) {
         resolve();
       },
       fail: function(e) {
-        console.error('[resolve] getTempFileURL FAIL:', JSON.stringify(e));
+        console.error('[resolve] resolveFileURLs FAIL:', JSON.stringify(e));
         _syncingFromCloud = false;
         resolve();
       }

@@ -70,7 +70,7 @@
 - 位置：`cloudfunctions/coupleOps/`
 - 通过 `wx.cloud.callFunction({ name: 'coupleOps', data: { action, ... } })` 调用
 - openid 从服务端 `wxContext.OPENID` 获取，不依赖客户端传参
-- 支持操作：`createCouple`、`bindCouple`、`loadCouple`、`saveField`、`saveBatch`、`findCoupleByOpenid`、`findAllCouplesByOpenid`、`findCoupleByCode`、`unbindCouple`
+- 支持操作：`createCouple`、`bindCouple`、`loadCouple`、`saveField`、`saveBatch`、`resolveFileURLs`、`findCoupleByOpenid`、`findAllCouplesByOpenid`、`findCoupleByCode`、`unbindCouple`
 
 ### 绑定流程
 1. **创建者**：输入开发者密钥→输入名字+性别+日期→创建云端文档→生成6位邀请码
@@ -95,6 +95,7 @@
 - `findCoupleByCode(inviteCode)`：按邀请码查询云端文档（只读，不修改）
 - `saveToCloud(storageKey, value)`：角色感知的单字段云同步
 - `saveBatchToCloud(updates)`：批量保存多个字段到云端
+- `resolveFileURLs(docId, fileIDs)`：云函数action，服务端批量将cloud fileID转为HTTP临时URL
 - `unbindCouple()`：删除云端文档+清除本地绑定
 - `getMyName()/setMyName()/getPartnerName()/setPartnerName()`
 - `getMyGender()/setMyGender()/getPartnerGender()/setPartnerGender()`
@@ -156,24 +157,32 @@
 
 ## 时光相册
 - 照片上传到微信云存储（`wx.cloud.uploadFile`），存储fileID
+- 照片有 `displayUrl`/`displayCoverUrl` 展示态字段，渲染层优先使用可直接显示的 HTTP URL
+- `_decorateAlbumsForDisplay` 负责将 cloud fileID 映射为展示用 URL
+- 上传照片后立即用本地 `tempPath` 作为 `displayUrl`，避免黑屏
 - 支持双指缩放预览（`movable-area` + `movable-view`）
 - 照片评论功能：评论存在照片的 `comments` 数组中，随相册同步
 
 ## 头像系统
 - 头像上传到微信云存储（`wx.cloud.uploadFile`），存储 cloud fileID（如 `cloud://xxx/avatars/my_xxx.jpg`）
 - cloud fileID 存入云数据库同步给对方
+- 上传后立即用本地 `tempPath` 显示，避免 `cloud://` 黑屏
 - profile 页有 5 秒轮询，确保异步下载完成后刷新显示
 
 ## 云文件跨用户访问（头像+相册照片）
 ### 问题
-cloud fileID（`cloud://`）在 `<image>` 组件中**跨用户无法直接加载**，只有上传者自己能访问。
+cloud fileID（`cloud://`）在 `<image>` 组件中**跨用户无法直接加载**，只有上传者自己能访问。客户端 `wx.cloud.getTempFileURL` 因权限不足返回 `STORAGE_EXCEED_AUTHORITY`。
 
 ### 解决方案
 - `_syncCloudToLocal` 完成数据同步后调用 `_resolveCloudFileIDs(data)`
-- `_resolveCloudFileIDs` 收集所有 cloud fileID（头像+相册照片），调用 `wx.cloud.getTempFileURL` 批量转为 HTTP URL（`https://`）
+- `_resolveCloudFileIDs` 收集所有 cloud fileID（头像+相册照片），**通过云函数 `coupleOps` 的 `resolveFileURLs` action** 在服务端批量转为 HTTP URL（`https://`）
+- 云函数使用管理员权限调用 `cloud.getTempFileURL`，绕过客户端权限限制
 - HTTP URL 写入本地 storage（`wx.setStorageSync`），`<image>` 可直接加载
 - **关键**：整个过程在 `_syncingFromCloud = true` 保护下执行，防止 HTTP URL 通过 `set()` 自动同步回云端覆盖原始 cloud fileID
 - `loadFromCloud` 使用 `await` 等待 `_resolveCloudFileIDs` 完成后才返回，确保页面读取到的是 HTTP URL
+- 头像上传后立即用本地 `tempPath` 显示，避免刚上传就把 `cloud://` 喂给 `<image>` 导致黑屏
+- 相册照片新增 `displayUrl`/`displayCoverUrl` 展示态字段，渲染层只消费可直接显示的地址
+- `_sanitizePhotoForStorage` 写入前清除 `displayUrl`，只保留 canonical `fileID` 和 `url`
 
 ## 心情打卡系统
 - 5种心情：😊开心/🥰甜蜜/😌平静/😢难过/😤生气
@@ -206,6 +215,9 @@ cloud fileID（`cloud://`）在 `<image>` 组件中**跨用户无法直接加载
 - 悄悄话/首页/商城/我的页有自动轮询（5秒），悄悄话3秒，onHide/onUnload时停止
 - 实时天气使用和风天气API，需在 `utils/weather.js` 中配置 `QWEATHER_KEY` 和 `QWEATHER_HOST`
 - app.json 中需声明 `wx.getFuzzyLocation` 权限和 `requiredPrivateInfos`
+- 天气定位使用 `gcj02` 坐标系（微信/高德），不要用 `wgs84`
+- 和风天气域名 `p86heymt7v.re.qweatherapi.com` 需添加到微信公众平台的 request 合法域名
+- 所有页面 `syncFromCloud` 需用 try/catch 包裹 `loadFromCloud`，防止网络错误导致页面崩溃
 
 ## 断线恢复机制
 ### 根因
@@ -247,6 +259,7 @@ cloud fileID（`cloud://`）在 `<image>` 组件中**跨用户无法直接加载
 ## 部署注意事项
 - `cloudfunctions/coupleOps` 需要在微信开发者工具中右键→上传并部署（云端安装依赖）
 - `couples` 集合安全规则需设为 `"read": "auth != null", "write": "auth != null"`
+- 和风天气域名需在微信公众平台→开发管理→开发设置→服务器域名中添加 request 合法域名
 
 ## 已知待修复问题
 （暂无）

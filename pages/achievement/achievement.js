@@ -57,7 +57,7 @@ Page({
   onShow() { this.checkAndLoad(); this.syncFromCloud(); },
 
   async syncFromCloud() {
-    await storage.loadFromCloud();
+    try { await storage.loadFromCloud(); } catch (e) { console.error('[achievement] loadFromCloud failed:', e); }
     this.checkAndLoad();
   },
 

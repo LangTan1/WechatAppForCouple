@@ -149,6 +149,8 @@ exports.main = async (event, context) => {
         return await saveField(event, openid);
       case 'saveBatch':
         return await saveBatch(event, openid);
+      case 'resolveFileURLs':
+        return await resolveFileURLs(event, openid);
       case 'findCoupleByOpenid':
         return await findCoupleByOpenid(openid);
       case 'findAllCouplesByOpenid':
@@ -240,6 +242,54 @@ async function saveBatch(event, openid) {
   }
   await couples.doc(docId).update({ data: updateData });
   return { success: true };
+}
+
+async function resolveFileURLs(event, openid) {
+  const { docId, fileIDs } = event;
+  await requireAuthorizedCouple(docId, openid);
+
+  const uniqueFileIDs = [];
+  const seen = new Set();
+  if (Array.isArray(fileIDs)) {
+    for (const fileID of fileIDs) {
+      if (typeof fileID !== 'string') continue;
+      if (!fileID.startsWith('cloud://')) continue;
+      if (seen.has(fileID)) continue;
+      seen.add(fileID);
+      uniqueFileIDs.push(fileID);
+    }
+  }
+
+  if (uniqueFileIDs.length === 0) {
+    return { success: true, fileList: [] };
+  }
+
+  const fileList = [];
+  const chunkSize = 50;
+  for (let i = 0; i < uniqueFileIDs.length; i += chunkSize) {
+    const chunk = uniqueFileIDs.slice(i, i + chunkSize);
+    try {
+      const res = await cloud.getTempFileURL({ fileList: chunk });
+      if (res && Array.isArray(res.fileList)) {
+        for (const item of res.fileList) {
+          fileList.push(item);
+        }
+      }
+    } catch (e) {
+      console.error('resolveFileURLs chunk failed:', e);
+      for (const fileID of chunk) {
+        fileList.push({
+          fileID,
+          tempFileURL: '',
+          maxAge: 86400,
+          status: 1,
+          errMsg: e && e.message ? e.message : 'resolve failed'
+        });
+      }
+    }
+  }
+
+  return { success: true, fileList };
 }
 
 async function findCoupleByOpenid(openid) {

@@ -23,7 +23,7 @@ Page({
   },
 
   async syncFromCloud() {
-    await storage.loadFromCloud();
+    try { await storage.loadFromCloud(); } catch (e) { console.error('[wishlist] loadFromCloud failed:', e); }
     this.loadWishes();
   },
 

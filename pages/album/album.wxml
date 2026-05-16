@@ -5,7 +5,7 @@
     <view class="album-list">
       <view class="album-card" wx:for="{{albums}}" wx:key="id" bindtap="openAlbum" data-id="{{item.id}}">
         <view class="album-cover flex-center">
-          <image wx:if="{{item.cover}}" src="{{item.cover}}" mode="aspectFill" class="cover-img" />
+          <image wx:if="{{item.displayCoverUrl || item.cover}}" src="{{item.displayCoverUrl || item.cover}}" mode="aspectFill" class="cover-img" />
           <text wx:else class="cover-emoji">📸</text>
         </view>
         <view class="album-info">
@@ -47,7 +47,7 @@
     <view class="photo-grid">
       <view class="photo-item" wx:for="{{currentAlbum.photos}}" wx:key="id" bindtap="viewPhoto" data-photo="{{item}}" data-index="{{index}}">
         <view class="photo-wrap">
-          <image wx:if="{{item.url}}" src="{{item.url}}" mode="aspectFill" class="photo-img" />
+          <image wx:if="{{item.displayUrl || item.url}}" src="{{item.displayUrl || item.url}}" mode="aspectFill" class="photo-img" />
           <text wx:else class="photo-emoji">{{item.emoji || '📸'}}</text>
         </view>
         <view class="photo-desc-row flex-between">
@@ -73,7 +73,7 @@
     <view class="preview-close" bindtap="closePreview">✕</view>
     <movable-area class="preview-movable-area" scale-area>
       <movable-view class="preview-movable-view" direction="all" scale scale-min="1" scale-max="4" scale-value="{{previewScale}}">
-        <image wx:if="{{previewPhoto.url}}" src="{{previewPhoto.url}}" mode="aspectFit" class="preview-img" show-menu-by-longpress />
+        <image wx:if="{{previewPhoto.displayUrl || previewPhoto.url}}" src="{{previewPhoto.displayUrl || previewPhoto.url}}" mode="aspectFit" class="preview-img" show-menu-by-longpress />
       </movable-view>
     </movable-area>
     <view class="preview-bottom">

@@ -66,7 +66,7 @@ function getLocation() {
 
     if (typeof wx.getFuzzyLocation === 'function') {
       wx.getFuzzyLocation({
-        type: 'wgs84',
+        type: 'gcj02',
         success: onSuccess,
         fail: onFail
       });

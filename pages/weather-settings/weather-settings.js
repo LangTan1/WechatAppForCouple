@@ -18,7 +18,11 @@ Page({
   },
 
   async syncFromCloud() {
-    await storage.loadFromCloud();
+    try {
+      await storage.loadFromCloud();
+    } catch (e) {
+      console.error('[weather-settings] loadFromCloud failed:', e);
+    }
     this.refreshData();
   },
 
@@ -45,13 +49,20 @@ Page({
   async useCurrentWeatherLocation() {
     wx.showLoading({ title: '更新天气中...' });
     try {
-      await weather.refreshMyWeather({ forceAuto: true });
+      const result = await Promise.race([
+        weather.refreshMyWeather({ forceAuto: true }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 15000))
+      ]);
+      wx.hideLoading();
       this.refreshData();
       wx.showToast({ title: '已更新当前位置', icon: 'none' });
     } catch (error) {
-      wx.showToast({ title: '定位失败，请检查授权', icon: 'none' });
-    } finally {
       wx.hideLoading();
+      var msg = '定位失败，请检查授权';
+      if (error && error.message === 'timeout') msg = '定位超时，请稍后重试';
+      else if (error && error.message) msg = '错误: ' + error.message;
+      else if (error) msg = '错误: ' + JSON.stringify(error);
+      wx.showModal({ title: '天气更新失败', content: msg, showCancel: false });
     }
   },
 
@@ -60,15 +71,18 @@ Page({
     this.setData({ manualRegion: region });
     wx.showLoading({ title: '保存位置中...' });
     try {
-      await weather.saveManualWeatherLocation({
-        province: region[0],
-        city: region[1],
-        district: region[2]
-      });
+      await Promise.race([
+        weather.saveManualWeatherLocation({
+          province: region[0],
+          city: region[1],
+          district: region[2]
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 15000))
+      ]);
       this.refreshData();
       wx.showToast({ title: '手动位置已更新', icon: 'none' });
     } catch (error) {
-      wx.showToast({ title: '位置解析失败，请重试', icon: 'none' });
+      wx.showToast({ title: error && error.message === 'timeout' ? '请求超时，请稍后重试' : '位置解析失败，请重试', icon: 'none' });
     } finally {
       wx.hideLoading();
     }

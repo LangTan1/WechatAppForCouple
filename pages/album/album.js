@@ -17,20 +17,60 @@ Page({
   },
 
   onLoad() { this.loadAlbums(); },
-  onShow() { this.loadAlbums(); this.syncFromCloud(); storage.updateLastView('album'); },
+  async onShow() {
+    await this.syncFromCloud();
+    await this.loadAlbums();
+    storage.updateLastView('album');
+  },
 
-  loadAlbums() {
+  async loadAlbums() {
     const albums = storage.getAlbums();
+    const displayAlbums = await this._decorateAlbumsForDisplay(albums);
     // 自动设置封面为第一张照片
     albums.forEach(a => {
       if (!a.cover && a.photos && a.photos.length > 0) {
-        a.cover = a.photos[0].url;
+        a.cover = a.photos[0].displayUrl || a.photos[0].url;
       }
     });
-    this.setData({ albums });
+    this.setData({ albums: displayAlbums });
+    if (this.data.view === 'photos' && this.data.currentAlbum && this.data.currentAlbum.id) {
+      const currentAlbum = displayAlbums.find(a => a.id === this.data.currentAlbum.id);
+      if (currentAlbum) {
+        this.setData({ currentAlbum: { ...currentAlbum } });
+      }
+    }
   },
 
   // ========== 相册列表操作 ==========
+  _isCloudFileID(value) {
+    return typeof value === 'string' && value.indexOf('cloud://') === 0;
+  },
+
+  async _decorateAlbumsForDisplay(albums) {
+    const baseAlbums = (Array.isArray(albums) ? albums : []).map((album) => ({
+      ...album,
+      photos: Array.isArray(album.photos) ? album.photos.map((photo) => ({ ...photo })) : []
+    }));
+    return baseAlbums.map((album) => {
+      const nextAlbum = { ...album };
+      const albumCover = !this._isCloudFileID(nextAlbum.cover) ? (nextAlbum.cover || '') : '';
+      nextAlbum.photos = (album.photos || []).map((photo) => {
+        const nextPhoto = { ...photo };
+        const localUrl = nextPhoto.displayUrl
+          || (!this._isCloudFileID(nextPhoto.url) ? (nextPhoto.url || '') : '')
+          || (!this._isCloudFileID(nextPhoto.fileID) ? (nextPhoto.fileID || '') : '');
+        nextPhoto.displayUrl = localUrl;
+        nextPhoto.url = localUrl;
+        return nextPhoto;
+      });
+      nextAlbum.displayCoverUrl = nextAlbum.photos.length > 0
+        ? (nextAlbum.photos[0].displayUrl || nextAlbum.photos[0].url || albumCover)
+        : albumCover;
+      nextAlbum.cover = nextAlbum.displayCoverUrl || '';
+      return nextAlbum;
+    });
+  },
+
   openAlbum(e) {
     const id = e.currentTarget.dataset.id;
     const album = this.data.albums.find(a => a.id === id);
@@ -131,13 +171,13 @@ Page({
     wx.cloud.uploadFile({
       cloudPath: cloudPath,
       filePath: url,
-      success: (uploadRes) => {
+      success: async (uploadRes) => {
         const fileID = uploadRes.fileID;
         const now = new Date();
         const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
         const newPhoto = {
-          id: Date.now(), fileID: fileID, url: fileID,
+          id: Date.now(), fileID: fileID, url: fileID, displayUrl: url,
           desc: desc.trim() || '美好瞬间', date: dateStr
         };
 
@@ -152,8 +192,10 @@ Page({
         storage.setAlbums(albums);
 
         this.setData({ showPhotoModal: false });
-        const updated = albums.find(a => a.id === this.data.currentAlbum.id);
+        const displayAlbums = await this._decorateAlbumsForDisplay(albums);
+        const updated = displayAlbums.find(a => a.id === this.data.currentAlbum.id);
         if (updated) this.setData({ currentAlbum: { ...updated } });
+        this.setData({ albums: displayAlbums });
         wx.hideLoading();
         wx.showToast({ title: '照片已保存 📸', icon: 'none' });
       },
@@ -167,7 +209,17 @@ Page({
 
   // 预览照片
   viewPhoto(e) {
-    this.setData({ previewPhoto: e.currentTarget.dataset.photo });
+    const photo = e.currentTarget.dataset.photo || {};
+    const displayUrl = photo.displayUrl
+      || (this._isCloudFileID(photo.url) ? '' : (photo.url || ''))
+      || (this._isCloudFileID(photo.fileID) ? '' : (photo.fileID || ''));
+    this.setData({
+      previewPhoto: {
+        ...photo,
+        url: displayUrl,
+        displayUrl: displayUrl
+      }
+    });
   },
   closePreview() {
     this.setData({ previewPhoto: null, previewScale: 1, commentText: '' });
@@ -224,7 +276,7 @@ Page({
   noop() {},
 
   async syncFromCloud() {
-    await storage.loadFromCloud();
-    this.loadAlbums();
+    try { await storage.loadFromCloud(); } catch (e) { console.error('[album] loadFromCloud failed:', e); }
+    await this.loadAlbums();
   }
 });

@@ -48,7 +48,7 @@
 - 微信原生开发（WXML + WXSS + JS），无框架依赖
 - 本地存储（wx.Storage）+ 微信云开发（NoSQL 数据库同步）
 - 跨设备数据库操作通过云函数 `coupleOps` 执行（管理员权限，openid 从服务端获取）
-- 头像和相册照片上传到微信云存储，通过 `getTempFileURL` 转为 HTTP URL 实现跨用户访问
+- 头像和相册照片上传到微信云存储，通过云函数 `resolveFileURLs` 在服务端转为 HTTP URL 实现跨用户访问
 - 图片同步分层：持久化层保留 `cloud://` fileID，展示层使用临时 URL，防止临时 URL 回写污染云端
 - 基础库 3.15.2，`es6: false`（关闭 Babel 转译）
 - 双人独立天气：双方各自维护天气 profile 和 snapshot，按角色同步（和风天气API）
@@ -189,6 +189,21 @@ git clone https://github.com/LangTan1/WechatAppForCouple.git
 - 定位失败时自动回退到手动设置的区县位置
 - 我的天气按 1 小时缓存刷新，对方天气展示 TA 最近一次同步结果
 - 资料页新增天气位置设置入口，支持”使用当前位置”和”手动设置区县”
+
+### v5.6 — 云文件解析改用云函数 + 全局错误处理 + 天气定位修复
+- **云文件解析改用云函数**：解决客户端 `getTempFileURL` 权限不足（`STORAGE_EXCEED_AUTHORITY`）问题
+  - 新增 `coupleOps` 云函数 `resolveFileURLs` action，服务端批量将 cloud fileID 转为 HTTP 临时 URL
+  - `storage.js` 的 `_resolveCloudFileIDs` 改为调用云函数，不再直接使用客户端 `wx.cloud.getTempFileURL`
+  - 头像上传后立即用本地 `tempPath` 显示，避免 `cloud://` 导致黑屏
+  - 相册新增 `displayUrl`/`displayCoverUrl` 展示态字段，渲染层只消费可直接显示的地址
+  - `_sanitizePhotoForStorage` 写入前清除 `displayUrl`，只保留 canonical fileID
+- **全局 loadFromCloud 错误处理**：所有 11 个页面的 `syncFromCloud` 添加 try/catch
+  - 防止网络错误导致未处理的 Promise rejection 使页面崩溃
+  - 错误仅 console.error，不影响页面正常使用本地数据
+- **天气设置超时处理**：自动定位和手动区县设置增加 15 秒超时
+  - 超时后弹出详细错误 Modal 而非静默失败
+  - 区分定位超时、网络错误等不同失败原因
+- **天气定位坐标系修正**：`wx.getFuzzyLocation` 从 `wgs84` 改为 `gcj02`（微信/高德坐标系）
 
 ### v5.5 — 天气设置页拆分 + 图片同步修复 + 云函数安全加固
 - **天气设置页拆分**：将资料页内联天气设置拆分为独立二级页 `pages/weather-settings`

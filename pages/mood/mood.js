@@ -33,7 +33,7 @@ Page({
   },
 
   async syncFromCloud() {
-    await storage.loadFromCloud();
+    try { await storage.loadFromCloud(); } catch (e) { console.error('[mood] loadFromCloud failed:', e); }
     this.loadData();
   },
 

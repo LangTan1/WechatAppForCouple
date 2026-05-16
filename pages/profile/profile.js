@@ -66,7 +66,11 @@ Page({
   },
 
   async syncFromCloud() {
-    await storage.loadFromCloud();
+    try {
+      await storage.loadFromCloud();
+    } catch (e) {
+      console.error('[profile] loadFromCloud failed:', e);
+    }
     this.refreshData();
   },
 
@@ -118,7 +122,7 @@ Page({
           filePath: tempPath,
           success: (uploadRes) => {
             storage.setMyAvatar(uploadRes.fileID);
-            this.setData({ myAvatar: uploadRes.fileID });
+            this.setData({ myAvatar: tempPath });
             wx.showToast({ title: '头像已更新', icon: 'none' });
           },
           fail: () => {
@@ -147,7 +151,7 @@ Page({
           filePath: tempPath,
           success: (uploadRes) => {
             storage.setPartnerAvatar(uploadRes.fileID);
-            this.setData({ partnerAvatar: uploadRes.fileID });
+            this.setData({ partnerAvatar: tempPath });
             wx.showToast({ title: '头像已更新', icon: 'none' });
           },
           fail: () => {

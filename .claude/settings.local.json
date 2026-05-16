@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__plugin_context7_context7__query-docs",
+      "Bash(node --check \"c:\\\\CodeLearning\\\\VS\\\\WeChatApp\\\\pages\\\\weather-settings\\\\weather-settings.js\")",
+      "Bash(node --check \"c:\\\\CodeLearning\\\\VS\\\\WeChatApp\\\\utils\\\\weather.js\")",
+      "Bash(node --check \"c:\\\\CodeLearning\\\\VS\\\\WeChatApp\\\\utils\\\\storage.js\")"
+    ]
+  }
+}
