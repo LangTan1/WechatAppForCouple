@@ -6,7 +6,9 @@ Page({
     albums: [],
     currentAlbum: { name: '', desc: '', photos: [] },
     previewPhoto: null,
+    previewPhotoIndex: -1,
     previewScale: 1,
+    previewTouchStartX: 0,
     commentText: '',
     // 弹窗
     showAlbumModal: false,
@@ -208,21 +210,147 @@ Page({
   },
 
   // 预览照片
+  _buildPreviewPhoto(photo) {
+    const sourcePhoto = photo || {};
+    const displayUrl = sourcePhoto.displayUrl
+      || (this._isCloudFileID(sourcePhoto.url) ? '' : (sourcePhoto.url || ''))
+      || (this._isCloudFileID(sourcePhoto.fileID) ? '' : (sourcePhoto.fileID || ''));
+    return {
+      ...sourcePhoto,
+      url: displayUrl,
+      displayUrl: displayUrl,
+      comments: sourcePhoto.comments || []
+    };
+  },
+
   viewPhoto(e) {
     const photo = e.currentTarget.dataset.photo || {};
-    const displayUrl = photo.displayUrl
-      || (this._isCloudFileID(photo.url) ? '' : (photo.url || ''))
-      || (this._isCloudFileID(photo.fileID) ? '' : (photo.fileID || ''));
+    const photos = this.data.currentAlbum.photos || [];
+    let index = Number(e.currentTarget.dataset.index);
+    if (Number.isNaN(index) || index < 0) {
+      index = photos.findIndex(item => item.id === photo.id);
+    }
     this.setData({
-      previewPhoto: {
-        ...photo,
-        url: displayUrl,
-        displayUrl: displayUrl
-      }
+      previewPhoto: this._buildPreviewPhoto(photo),
+      previewPhotoIndex: index >= 0 ? index : 0,
+      previewScale: 1,
+      commentText: ''
     });
   },
   closePreview() {
-    this.setData({ previewPhoto: null, previewScale: 1, commentText: '' });
+    this.setData({ previewPhoto: null, previewPhotoIndex: -1, previewScale: 1, commentText: '' });
+  },
+
+  showPreviewPhotoAt(index) {
+    const photos = this.data.currentAlbum.photos || [];
+    if (photos.length === 0) {
+      this.closePreview();
+      return;
+    }
+    if (index < 0 || index >= photos.length) return;
+    this.setData({
+      previewPhoto: this._buildPreviewPhoto(photos[index]),
+      previewPhotoIndex: index,
+      previewScale: 1,
+      commentText: ''
+    });
+  },
+
+  showPrevPhoto() {
+    this.showPreviewPhotoAt(this.data.previewPhotoIndex - 1);
+  },
+
+  showNextPhoto() {
+    this.showPreviewPhotoAt(this.data.previewPhotoIndex + 1);
+  },
+
+  onPreviewTouchStart(e) {
+    const touch = e.touches && e.touches[0];
+    if (!touch) return;
+    this.setData({ previewTouchStartX: touch.clientX });
+  },
+
+  onPreviewTouchEnd(e) {
+    const touch = e.changedTouches && e.changedTouches[0];
+    if (!touch) return;
+    const deltaX = touch.clientX - this.data.previewTouchStartX;
+    if (Math.abs(deltaX) < 60) return;
+    if (deltaX < 0) this.showNextPhoto();
+    else this.showPrevPhoto();
+  },
+
+  _photoMatchesCover(photo, cover) {
+    if (!photo || !cover) return false;
+    return photo.fileID === cover || photo.url === cover;
+  },
+
+  async _deletePhotoById(photoId) {
+    const albumId = this.data.currentAlbum.id;
+    const currentIndex = this.data.previewPhotoIndex;
+    let albums = storage.getAlbums();
+    let nextPreviewIndex = -1;
+    let targetAlbum = null;
+    let deletedPhoto = null;
+
+    albums = albums.map(album => {
+      if (album.id !== albumId) return album;
+      const photos = album.photos || [];
+      const deletedIndex = photos.findIndex(photo => photo.id === photoId);
+      if (deletedIndex === -1) {
+        targetAlbum = album;
+        return album;
+      }
+
+      deletedPhoto = photos[deletedIndex];
+      const nextPhotos = photos.filter(photo => photo.id !== photoId);
+      let nextCover = album.cover || '';
+      if (nextPhotos.length === 0) {
+        nextCover = '';
+      } else if (!nextCover || this._photoMatchesCover(deletedPhoto, nextCover)) {
+        nextCover = nextPhotos[0].fileID || nextPhotos[0].url || '';
+      }
+      nextPreviewIndex = Math.min(currentIndex, nextPhotos.length - 1);
+      targetAlbum = { ...album, cover: nextCover, photos: nextPhotos };
+      return targetAlbum;
+    });
+
+    if (!deletedPhoto || !targetAlbum) return;
+
+    storage.setAlbums(albums);
+    const displayAlbums = await this._decorateAlbumsForDisplay(albums);
+    const displayAlbum = displayAlbums.find(album => album.id === albumId) || { ...targetAlbum };
+    this.setData({
+      albums: displayAlbums,
+      currentAlbum: { ...displayAlbum }
+    });
+
+    if (!displayAlbum.photos || displayAlbum.photos.length === 0) {
+      this.closePreview();
+      return;
+    }
+
+    this.showPreviewPhotoAt(nextPreviewIndex);
+  },
+
+  deletePreviewPhoto() {
+    const photo = this.data.previewPhoto;
+    if (!photo) return Promise.resolve();
+
+    return new Promise((resolve) => {
+      wx.showModal({
+        title: '删除照片',
+        content: '确定要删除这张照片吗？相册会保留。',
+        confirmColor: '#FF6B8A',
+        success: async (res) => {
+          if (res.confirm) {
+            await this._deletePhotoById(photo.id);
+            wx.showToast({ title: '照片已删除', icon: 'none' });
+          }
+          resolve();
+        },
+        fail: () => resolve()
+      });
+    });
   },
 
   onCommentInput(e) {

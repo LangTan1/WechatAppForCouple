@@ -69,8 +69,10 @@
   </view>
 
   <!-- 照片预览（支持缩放+评论） -->
-  <view class="preview-overlay" wx:if="{{previewPhoto}}">
+  <view class="preview-overlay" wx:if="{{previewPhoto}}" bindtouchstart="onPreviewTouchStart" bindtouchend="onPreviewTouchEnd">
     <view class="preview-close" bindtap="closePreview">✕</view>
+    <view class="preview-nav preview-prev" wx:if="{{previewPhotoIndex > 0}}" catchtap="showPrevPhoto">‹</view>
+    <view class="preview-nav preview-next" wx:if="{{previewPhotoIndex < currentAlbum.photos.length - 1}}" catchtap="showNextPhoto">›</view>
     <movable-area class="preview-movable-area" scale-area>
       <movable-view class="preview-movable-view" direction="all" scale scale-min="1" scale-max="4" scale-value="{{previewScale}}">
         <image wx:if="{{previewPhoto.displayUrl || previewPhoto.url}}" src="{{previewPhoto.displayUrl || previewPhoto.url}}" mode="aspectFit" class="preview-img" show-menu-by-longpress />
@@ -80,6 +82,9 @@
       <view class="preview-info">
         <text class="preview-desc">{{previewPhoto.desc || '未命名'}}</text>
         <text class="preview-date">{{previewPhoto.date}}</text>
+      </view>
+      <view class="preview-actions">
+        <view class="preview-delete" catchtap="deletePreviewPhoto">删除照片</view>
       </view>
       <!-- 评论列表 -->
       <scroll-view wx:if="{{previewPhoto.comments.length > 0}}" class="comment-list" scroll-y>

@@ -1,4 +1,126 @@
-# 版本更新记录 v5.6
+# 版本更新记录 v5.7
+
+## 更新总览
+
+本次更新聚焦 **时光相册体验优化**，在保持现有云图片同步链路不变的前提下，补齐两个常用操作：
+
+1. **支持单独删除相册中的某一张照片**
+2. **照片预览支持上一张 / 下一张切换与左右滑动**
+
+建议提交标题：
+
+- `feat: 优化时光相册照片删除和滑动预览`
+
+可选简短标题：
+
+- `feat: 相册支持单张删除和滑动看图`
+
+---
+
+## 一、相册内单张照片删除
+
+### 背景
+
+之前时光相册只能删除整个相册，无法单独删除某张已经上传的照片。用户如果只想移除一张照片，必须删除整本相册，操作成本高且容易误删其它回忆。
+
+### 方案
+
+在照片预览层新增“删除照片”入口，用户看清当前照片后再删除，并通过二次确认降低误触风险。
+
+### 行为细节
+
+- 点击相册照片进入预览后，底部显示“删除照片”
+- 点击删除后弹出确认弹窗
+- 确认后只从当前相册的 `photos` 数组中移除该照片
+- 如果相册还有照片，预览自动切到相邻照片
+- 如果删除后相册为空，则关闭预览，保留空相册
+- 删除整个相册的能力保持不变，仍在“编辑相册”弹窗中执行
+
+---
+
+## 二、照片预览左右切换
+
+### 背景
+
+之前查看相册照片时，看完一张必须关闭预览，再回到网格里点另一张，连续浏览体验不顺。
+
+### 方案
+
+预览层新增当前照片索引 `previewPhotoIndex`，打开照片时记录所在位置，并支持：
+
+- 点击左 / 右按钮切换上一张 / 下一张
+- 在预览层左右滑动切换照片
+- 第一张和最后一张自动限制边界，不会越界
+- 切换照片时重置缩放状态和评论输入框
+
+---
+
+## 三、图片链路保护
+
+本次刻意不改动相册图片的云同步协议：
+
+- 未修改 `utils/storage.js`
+- 未修改 `cloudfunctions/coupleOps`
+- 继续保留 canonical `cloud://` fileID 作为真实存储值
+- 继续只在展示层消费 `displayUrl` / `displayCoverUrl`
+- 保存相册仍走 `storage.setAlbums()`，由既有净化逻辑防止临时 URL 写回云端
+
+---
+
+## 四、变更文件
+
+```text
+pages/album/album.js                         # 单张删除、预览索引、上一张/下一张、左右滑动
+pages/album/album.wxml                       # 预览层新增切换按钮和删除照片按钮
+pages/album/album.wxss                       # 预览按钮和删除按钮样式
+pages/album/review.test.js                   # 相册行为回归测试
+docs/superpowers/specs/2026-05-24-album-photo-delete-swipe-design.md # 设计说明
+docs/superpowers/plans/2026-05-24-album-photo-delete-swipe.md        # 实施计划
+README.md                                    # 更新日志补充
+COMMIT_SUMMARY.md                            # 本文档
+```
+
+注意：当前工作区里 `CLAUDE.md` 和 `pages/profile/profile.wxml` 也处于 modified 状态，但它们不是本次相册功能改动的一部分，提交时建议不要一起加入。
+
+---
+
+## 五、已验证内容
+
+```powershell
+node --check pages\album\album.js
+node pages\album\review.test.js
+node utils\storage.review.test.js
+```
+
+验证结果：
+
+- 相册页面 JS 语法检查通过
+- 单张删除、预览索引、按钮切换、左右滑动回归测试通过
+- storage 相册图片净化与云文件展示回归测试通过
+
+---
+
+## 六、建议提交范围
+
+建议本次只提交以下文件：
+
+```powershell
+git add pages\album\album.js `
+        pages\album\album.wxml `
+        pages\album\album.wxss `
+        pages\album\review.test.js `
+        docs\superpowers\plans\2026-05-24-album-photo-delete-swipe.md `
+        README.md `
+        COMMIT_SUMMARY.md
+
+git commit -m "feat: 优化时光相册照片删除和滑动预览"
+```
+
+如果需要把已经创建的设计说明也推到 GitHub，请确认本地提交 `e3d8cc3 docs: design album photo delete and swipe preview` 会一起 push。
+
+---
+
+# 历史版本更新记录 v5.6
 
 ## 更新总览
 
