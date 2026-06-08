@@ -1,4 +1,5 @@
 const storage = require('../../utils/storage');
+const contentSecurity = require('../../utils/content-security');
 
 Page({
   data: {
@@ -108,7 +109,7 @@ Page({
     this.setData({ formType: e.detail.value === '0' ? 'annual' : 'once' });
   },
 
-  saveAnniversary() {
+  async saveAnniversary() {
     const { editingId, formTitle, formIcon, formDate, formType } = this.data;
     if (!formTitle.trim()) {
       wx.showToast({ title: '请输入名称～', icon: 'none' });
@@ -118,6 +119,8 @@ Page({
       wx.showToast({ title: '请选择日期～', icon: 'none' });
       return;
     }
+
+    if (!(await contentSecurity.checkBeforePublish([formTitle, formIcon]))) return;
 
     let anniversaries = storage.getAnniversaries();
 

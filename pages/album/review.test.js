@@ -3,24 +3,34 @@ const path = require('node:path');
 
 const albumPath = path.resolve(__dirname, 'album.js');
 const storagePath = path.resolve(__dirname, '../../utils/storage.js');
+const contentSecurityPath = path.resolve(__dirname, '../../utils/content-security.js');
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
-function createPageWithAlbums(initialAlbums) {
+function createPageWithAlbums(initialAlbums, options = {}) {
   const runtime = {
     albums: clone(initialAlbums),
     modalCalls: [],
-    toastCalls: []
+    toastCalls: [],
+    saveAlbumsSuccess: options.saveAlbumsSuccess !== false
   };
 
   const storageStub = {
     getAlbums() { return clone(runtime.albums); },
-    setAlbums(nextAlbums) { runtime.albums = clone(nextAlbums); },
+    setAlbums(nextAlbums) {
+      runtime.albums = clone(nextAlbums);
+      return Promise.resolve(runtime.saveAlbumsSuccess);
+    },
     getMyName() { return '测试用户'; },
+    getCoupleDocId() { return 'doc-1'; },
     updateLastView() {},
     loadFromCloud: async () => {}
+  };
+  const contentSecurityStub = {
+    checkBeforePublish: async () => true,
+    checkMediaBeforePublish: async () => ({ success: true, traceId: 'trace-1' })
   };
 
   global.wx = {
@@ -52,6 +62,12 @@ function createPageWithAlbums(initialAlbums) {
     filename: storagePath,
     loaded: true,
     exports: storageStub
+  };
+  require.cache[contentSecurityPath] = {
+    id: contentSecurityPath,
+    filename: contentSecurityPath,
+    loaded: true,
+    exports: contentSecurityStub
   };
   require(albumPath);
 
@@ -172,10 +188,49 @@ async function testDeleteOnlyPhotoKeepsEmptyAlbumAndClosesPreview() {
   assert.equal(page.data.previewPhotoIndex, -1);
 }
 
+async function testCreateAlbumContinuesWhenCloudSaveFails() {
+  const albums = [{ id: 1, name: '已有相册', desc: '', cover: '', photos: [] }];
+  const { page, runtime } = createPageWithAlbums(albums, { saveAlbumsSuccess: false });
+
+  page.setData({
+    albumForm: { name: '新相册', desc: '' },
+    showAlbumModal: true
+  });
+
+  await page.createAlbum();
+
+  assert.equal(page.data.showAlbumModal, false);
+  assert.equal(runtime.albums.length, 2);
+  assert.equal(runtime.toastCalls.some((call) => String(call.title).includes('已创建')), true);
+}
+
+async function testCloudFileIdRemainsDisplayableWithoutTempUrl() {
+  const albums = [{
+    id: 1,
+    name: '云相册',
+    desc: '',
+    cover: 'cloud://env/photo.jpg',
+    photos: [
+      { id: 101, fileID: 'cloud://env/photo.jpg', url: 'cloud://env/photo.jpg', desc: '云照片' }
+    ]
+  }];
+  const { page } = createPageWithAlbums(albums);
+
+  await page.loadAlbums();
+
+  assert.equal(page.data.albums[0].displayCoverUrl, 'cloud://env/photo.jpg');
+  assert.equal(page.data.currentAlbum.photos[0].displayUrl, 'cloud://env/photo.jpg');
+
+  page.viewPhoto(eventForPhoto(page.data.currentAlbum.photos[0], 0));
+  assert.equal(page.data.previewPhoto.displayUrl, 'cloud://env/photo.jpg');
+}
+
 async function run() {
   await testPreviewNavigationUsesCurrentAlbumIndex();
   await testDeleteMiddlePhotoKeepsAlbumAndShowsNeighbor();
   await testDeleteOnlyPhotoKeepsEmptyAlbumAndClosesPreview();
+  await testCreateAlbumContinuesWhenCloudSaveFails();
+  await testCloudFileIdRemainsDisplayableWithoutTempUrl();
   console.log('album review tests passed');
 }
 

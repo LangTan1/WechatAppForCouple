@@ -1,4 +1,5 @@
 const storage = require('../../utils/storage');
+const contentSecurity = require('../../utils/content-security');
 
 const MOOD_OPTIONS = [
   { key: 'happy', emoji: '😊', label: '开心' },
@@ -71,7 +72,7 @@ Page({
     this.setData({ noteText: e.detail.value });
   },
 
-  submitMood() {
+  async submitMood() {
     if (!this.data.selectedMood) {
       wx.showToast({ title: '选一个心情吧～', icon: 'none' });
       return;
@@ -80,6 +81,8 @@ Page({
       wx.showToast({ title: '今天已经打过卡啦', icon: 'none' });
       return;
     }
+
+    if (!(await contentSecurity.checkBeforePublish(this.data.noteText))) return;
 
     const now = new Date();
     const dateStr = storage._todayStr();

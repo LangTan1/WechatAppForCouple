@@ -66,7 +66,7 @@
         <text class="coin-big">{{coinBalance}}</text>
         <text class="coin-unit">爱心币</text>
       </view>
-      <view class="recharge-btn-full" bindtap="showRecharge">🤝 申请充值</view>
+      <view class="recharge-btn-full" bindtap="showRecharge">🤝 申请补币</view>
       <view wx:if="{{coinTxns.length > 0}}" class="txn-list">
         <view class="txn-item" wx:for="{{coinTxns}}" wx:key="id">
           <view class="txn-row flex-between">
@@ -133,7 +133,7 @@
 
   <view class="overlay" wx:if="{{showRechargeModal}}" bindtap="hideRecharge">
     <view class="modal-card" catchtap="noop">
-      <view class="modal-title">💰 申请充值</view>
+      <view class="modal-title">💰 申请补币</view>
       <view class="form-row">
         <text class="form-label">想要多少币</text>
         <input class="form-input short-input" type="number" placeholder="10" value="{{rechargeAmount}}" bindinput="onRechargeAmount" />
@@ -178,7 +178,7 @@
   </view>
 
   <view class="footer">
-    <text>玲珑小栈 v1.0</text>
+    <text>琳浪小栈 v4.0</text>
     <text class="footer-heart">Made with 💖</text>
   </view>
   <view style="height: 40rpx;"></view>

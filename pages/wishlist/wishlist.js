@@ -1,4 +1,5 @@
 const storage = require('../../utils/storage');
+const contentSecurity = require('../../utils/content-security');
 
 Page({
   data: {
@@ -71,12 +72,14 @@ Page({
     this.setData({ newWish: e.detail.value });
   },
 
-  addWish() {
+  async addWish() {
     const text = this.data.newWish.trim();
     if (!text) {
       wx.showToast({ title: '写点什么吧～', icon: 'none' });
       return;
     }
+
+    if (!(await contentSecurity.checkBeforePublish(text))) return;
 
     const wishes = storage.getWishes();
     const newWish = {

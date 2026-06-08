@@ -1,4 +1,5 @@
 const storage = require('../../utils/storage');
+const contentSecurity = require('../../utils/content-security');
 
 Page({
   data: {
@@ -46,8 +47,8 @@ Page({
 
     // ===== 开发者 =====
     devTabs: [
-      { key: 'menu', label: '商品管理' },
-      { key: 'orders', label: '订单队列' },
+      { key: 'menu', label: '菜单整理' },
+      { key: 'orders', label: '待办处理' },
       { key: 'requests', label: '请求处理' },
     ],
     devTab: 'menu',
@@ -156,7 +157,7 @@ Page({
   },
 
   // ==================== 使用者 ====================
-  // 确保默认商品存在
+  // 确保默认菜单项存在
   ensureDefaultItems() {
     const allItems = storage.getMenuItems();
     const defaultItems = [
@@ -214,7 +215,7 @@ Page({
       { id: 2025, name: '哄你睡觉', emoji: '😴', topCategory: 'other', category: 'intimate', price: 15, published: true, addedBy: 'dev' },
     ];
 
-    // 检查哪些默认商品需要添加
+    // 检查哪些默认菜单项需要添加
     const existingIds = allItems.map(item => item.id);
     const missingDefaults = defaultItems.filter(item => !existingIds.includes(item.id));
 
@@ -318,7 +319,7 @@ Page({
     if (!item) return;
     const price = item.price || 5;
     if (price < 0) {
-      // 负价格：不扣币，订单提交给开发者，确认后发放爱心币
+      // 负消耗：不扣币，待对方确认后发放爱心币
       storage.addOrder(item);
       this.setData({ orderItem: null });
       this.loadUserData();
@@ -334,7 +335,7 @@ Page({
       this.setData({ myCoins: this.data.myCoins - price, orderItem: null });
       this.loadUserData();
       this.updateTabBadge();
-      wx.showToast({ title: `下单成功！${item.name} 🎉`, icon: 'none', duration: 2000 });
+      wx.showToast({ title: `已加入安排！${item.name} 🎉`, icon: 'none', duration: 2000 });
     }
   },
 
@@ -356,17 +357,18 @@ Page({
     this.setData({ orderItem: this.data.randomResult, randomResult: null });
   },
 
-  // 充值
+  // 补币
   showRecharge() { this.setData({ showRechargeModal: true, rechargeAmount: '10', rechargeItem: '' }); },
   hideRecharge() { this.setData({ showRechargeModal: false }); },
   onRechargeAmount(e) { this.setData({ rechargeAmount: e.detail.value }); },
   onRechargeItem(e) { this.setData({ rechargeItem: e.detail.value }); },
-  sendRecharge() {
+  async sendRecharge() {
     const amount = parseInt(this.data.rechargeAmount) || 10;
     const item = this.data.rechargeItem.trim() || '一个拥抱 💕';
+    if (!(await contentSecurity.checkBeforePublish(item))) return;
     storage.addCoinRequest(amount, item, storage.getMyName());
     this.setData({ showRechargeModal: false });
-    wx.showToast({ title: '充值请求已发送 💌', icon: 'none' });
+    wx.showToast({ title: '补币请求已发送 💌', icon: 'none' });
   },
 
   // 食物许愿 → 同时自动加入订单队列
@@ -374,10 +376,11 @@ Page({
   hideFoodRequest() { this.setData({ showFoodRequestModal: false }); },
   onFoodReqName(e) { this.setData({ foodReqName: e.detail.value }); },
   onFoodReqEmoji(e) { this.setData({ foodReqEmoji: e.detail.value }); },
-  sendFoodRequest() {
+  async sendFoodRequest() {
     const name = this.data.foodReqName.trim();
     if (!name) { wx.showToast({ title: '请输入食物名称～', icon: 'none' }); return; }
     const emoji = this.data.foodReqEmoji || '🍽️';
+    if (!(await contentSecurity.checkBeforePublish([name, emoji]))) return;
     const myName = storage.getMyName();
     // 加入食物请求
     storage.addFoodRequest(name, emoji, myName);
@@ -386,7 +389,7 @@ Page({
     this.setData({ showFoodRequestModal: false });
     this.loadUserData();
     this.updateTabBadge();
-    wx.showToast({ title: '许愿成功，已加入订单 💫', icon: 'none' });
+    wx.showToast({ title: '许愿成功，已加入待办 💫', icon: 'none' });
   },
 
   // ==================== 开发者 ====================
@@ -476,9 +479,10 @@ Page({
   onFoodFormCat(e) { this.setData({ 'foodForm.catIdx': parseInt(e.detail.value) }); },
   onFoodFormPrice(e) { this.setData({ 'foodForm.price': e.detail.value }); },
 
-  saveFood() {
+  async saveFood() {
     const { name, emoji, topCatIdx, catIdx, price } = this.data.foodForm;
     if (!name.trim()) { wx.showToast({ title: '请输入名称', icon: 'none' }); return; }
+    if (!(await contentSecurity.checkBeforePublish([name, emoji]))) return;
     const p = Math.max(-9999, Math.min(9999, parseInt(price) || 5));
     const topCategory = this.data.topCategories[topCatIdx].key;
     const category = topCategory === 'food' ? this.data.categoryKeys[catIdx] : topCategory;
@@ -500,7 +504,7 @@ Page({
     storage.setMenuItems(allItems);
     this.setData({ showFoodModal: false });
     this.loadDevData();
-    wx.showToast({ title: '已上架 ✅', icon: 'none' });
+    wx.showToast({ title: '已保存 ✅', icon: 'none' });
   },
 
   deleteMenuItem(e) {
@@ -530,14 +534,14 @@ Page({
     wx.showToast({ title: '已接受，开始制作 🍳', icon: 'none' });
   },
 
-  // 订单管理 - 标记完成（负价格订单发放爱心币）
+  // 待办处理 - 标记完成（负消耗待办发放爱心币）
   markOrderDone(e) {
     const id = e.currentTarget.dataset.id;
     let orders = storage.getOrderQueue();
     const order = orders.find(o => o.id === id);
     orders = orders.map(o => { if (o.id === id) return { ...o, status: 'done', updatedAt: Date.now() }; return o; });
     storage.setOrderQueue(orders);
-    // 负价格：给使用者发放对应的爱心币
+    // 负消耗：给使用者发放对应的爱心币
     if (order && order.price < 0) {
       const giveCoins = -order.price;
       const currentCoins = storage.getGirlCoins();
@@ -556,10 +560,11 @@ Page({
   },
   hideRejectModal() { this.setData({ showRejectModal: false }); },
   onRejectReason(e) { this.setData({ rejectReason: e.detail.value }); },
-  confirmRejectOrder() {
+  async confirmRejectOrder() {
     const id = this.data.rejectOrderId;
     const reason = this.data.rejectReason.trim() || '暂时无法提供';
     let orders = storage.getOrderQueue();
+    if (!(await contentSecurity.checkBeforePublish(reason))) return;
     orders = orders.map(o => {
       if (o.id === id) return { ...o, status: 'rejected', rejectReason: reason, updatedAt: Date.now() };
       return o;
@@ -592,7 +597,7 @@ Page({
     });
     storage.setMenuItems(allItems);
 
-    // 同时更新对应订单价格（从0变为实际价格）
+    // 同时更新对应待办消耗（从0变为实际消耗）
     let orders = storage.getOrderQueue();
     orders = orders.map(o => {
       if (o.foodName === item.name && o.price === 0) {
@@ -609,7 +614,7 @@ Page({
     });
     storage.setFoodRequests(requests);
     this.loadDevData();
-    wx.showToast({ title: '已上架 ✅', icon: 'none' });
+    wx.showToast({ title: '已加入菜单 ✅', icon: 'none' });
   },
 
   rejectFoodRequest(e) {

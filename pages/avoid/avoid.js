@@ -1,4 +1,5 @@
 const storage = require('../../utils/storage');
+const contentSecurity = require('../../utils/content-security');
 
 Page({
   data: {
@@ -49,7 +50,7 @@ Page({
     this.setData({ newContent: e.detail.value });
   },
 
-  addItem() {
+  async addItem() {
     const { newEvent, newEventDate, newContent } = this.data;
     if (!newEvent.trim()) {
       wx.showToast({ title: '写一下什么事情～', icon: 'none' });
@@ -59,6 +60,8 @@ Page({
       wx.showToast({ title: '写写你的感受吧～', icon: 'none' });
       return;
     }
+
+    if (!(await contentSecurity.checkBeforePublish([newEvent, newContent]))) return;
 
     const now = new Date();
     const recordTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;

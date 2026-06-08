@@ -1,4 +1,5 @@
 const storage = require('../../utils/storage');
+const contentSecurity = require('../../utils/content-security');
 
 Page({
   data: {
@@ -55,12 +56,13 @@ Page({
     }));
     return baseAlbums.map((album) => {
       const nextAlbum = { ...album };
-      const albumCover = !this._isCloudFileID(nextAlbum.cover) ? (nextAlbum.cover || '') : '';
+      const albumCover = nextAlbum.cover || '';
       nextAlbum.photos = (album.photos || []).map((photo) => {
         const nextPhoto = { ...photo };
         const localUrl = nextPhoto.displayUrl
-          || (!this._isCloudFileID(nextPhoto.url) ? (nextPhoto.url || '') : '')
-          || (!this._isCloudFileID(nextPhoto.fileID) ? (nextPhoto.fileID || '') : '');
+          || nextPhoto.url
+          || nextPhoto.fileID
+          || '';
         nextPhoto.displayUrl = localUrl;
         nextPhoto.url = localUrl;
         return nextPhoto;
@@ -94,15 +96,16 @@ Page({
   onAlbumName(e) { this.setData({ 'albumForm.name': e.detail.value }); },
   onAlbumDesc(e) { this.setData({ 'albumForm.desc': e.detail.value }); },
 
-  createAlbum() {
+  async createAlbum() {
     const { name, desc } = this.data.albumForm;
     if (!name.trim()) { wx.showToast({ title: '请输入相册名称～', icon: 'none' }); return; }
     const albums = storage.getAlbums();
+    if (!(await contentSecurity.checkBeforePublish([name, desc]))) return;
     albums.push({
       id: Date.now(), name: name.trim(), desc: desc.trim(),
       cover: '', photos: []
     });
-    storage.setAlbums(albums);
+    await storage.setAlbums(albums);
     this.setData({ showAlbumModal: false });
     this.loadAlbums();
     wx.showToast({ title: '相册已创建 📸', icon: 'none' });
@@ -116,14 +119,15 @@ Page({
   onEditAlbumName(e) { this.setData({ 'currentAlbum.name': e.detail.value }); },
   onEditAlbumDesc(e) { this.setData({ 'currentAlbum.desc': e.detail.value }); },
 
-  saveAlbum() {
+  async saveAlbum() {
     const { currentAlbum } = this.data;
+    if (!(await contentSecurity.checkBeforePublish([currentAlbum.name, currentAlbum.desc]))) return;
     let albums = storage.getAlbums();
     albums = albums.map(a => {
       if (a.id === currentAlbum.id) return { ...a, name: currentAlbum.name, desc: currentAlbum.desc };
       return a;
     });
-    storage.setAlbums(albums);
+    await storage.setAlbums(albums);
     this.setData({ showEditAlbumModal: false });
     this.loadAlbums();
     wx.showToast({ title: '已保存', icon: 'none' });
@@ -133,11 +137,11 @@ Page({
     wx.showModal({
       title: '删除相册', content: '确定要删除这个相册和里面的所有照片吗？',
       confirmColor: '#FF6B8A',
-      success: (res) => {
+      success: async (res) => {
         if (res.confirm) {
           let albums = storage.getAlbums();
           albums = albums.filter(a => a.id !== this.data.currentAlbum.id);
-          storage.setAlbums(albums);
+          await storage.setAlbums(albums);
           this.setData({ showEditAlbumModal: false });
           this.backToAlbums();
           wx.showToast({ title: '相册已删除', icon: 'none' });
@@ -162,9 +166,10 @@ Page({
     });
   },
 
-  savePhoto() {
+  async savePhoto() {
     const { url, desc } = this.data.photoForm;
     if (!url) { wx.showToast({ title: '请选择照片～', icon: 'none' }); return; }
+    if (!(await contentSecurity.checkBeforePublish(desc))) return;
 
     wx.showLoading({ title: '上传中…' });
 
@@ -175,11 +180,25 @@ Page({
       filePath: url,
       success: async (uploadRes) => {
         const fileID = uploadRes.fileID;
+        const photoId = Date.now();
+        const mediaCheck = await contentSecurity.checkMediaBeforePublish(fileID, {
+          docId: storage.getCoupleDocId(),
+          albumId: this.data.currentAlbum.id,
+          photoId: photoId,
+          mediaType: 2
+        });
+        if (!mediaCheck.success) {
+          wx.hideLoading();
+          return;
+        }
+
         const now = new Date();
         const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
         const newPhoto = {
-          id: Date.now(), fileID: fileID, url: fileID, displayUrl: url,
+          id: photoId, fileID: fileID, url: fileID, displayUrl: url,
+          mediaCheckStatus: 'pending',
+          mediaCheckTraceId: mediaCheck.traceId || '',
           desc: desc.trim() || '美好瞬间', date: dateStr
         };
 
@@ -191,7 +210,7 @@ Page({
           }
           return a;
         });
-        storage.setAlbums(albums);
+        await storage.setAlbums(albums);
 
         this.setData({ showPhotoModal: false });
         const displayAlbums = await this._decorateAlbumsForDisplay(albums);
@@ -213,8 +232,9 @@ Page({
   _buildPreviewPhoto(photo) {
     const sourcePhoto = photo || {};
     const displayUrl = sourcePhoto.displayUrl
-      || (this._isCloudFileID(sourcePhoto.url) ? '' : (sourcePhoto.url || ''))
-      || (this._isCloudFileID(sourcePhoto.fileID) ? '' : (sourcePhoto.fileID || ''));
+      || sourcePhoto.url
+      || sourcePhoto.fileID
+      || '';
     return {
       ...sourcePhoto,
       url: displayUrl,
@@ -316,7 +336,7 @@ Page({
 
     if (!deletedPhoto || !targetAlbum) return;
 
-    storage.setAlbums(albums);
+    await storage.setAlbums(albums);
     const displayAlbums = await this._decorateAlbumsForDisplay(albums);
     const displayAlbum = displayAlbums.find(album => album.id === albumId) || { ...targetAlbum };
     this.setData({
@@ -357,11 +377,12 @@ Page({
     this.setData({ commentText: e.detail.value });
   },
 
-  addComment() {
+  async addComment() {
     const text = this.data.commentText.trim();
     if (!text) return;
     const photo = this.data.previewPhoto;
     if (!photo) return;
+    if (!(await contentSecurity.checkBeforePublish(text))) return;
 
     const comment = {
       id: Date.now(),
@@ -389,7 +410,7 @@ Page({
       return a;
     });
     if (updated) {
-      storage.setAlbums(albums);
+      await storage.setAlbums(albums);
       // 更新当前预览照片和相册
       const album = albums.find(a => a.id === this.data.currentAlbum.id);
       const updatedPhoto = album.photos.find(p => p.id === photo.id);

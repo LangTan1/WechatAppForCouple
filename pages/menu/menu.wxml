@@ -10,21 +10,21 @@
         <text class="coin-amount">{{myCoins}}</text>
         <text class="coin-label">爱心币</text>
       </view>
-      <view class="recharge-btn" bindtap="showRecharge">充值</view>
+      <view class="recharge-btn" bindtap="showRecharge">补币</view>
     </view>
 
-    <!-- 使用者子 Tab：商城 / 我的订单 -->
+    <!-- 使用者子 Tab：小菜单 / 我的待办 -->
     <view class="user-tabs flex-row">
       <view class="user-tab flex-center {{userTab === 'menu' ? 'active' : ''}}" bindtap="switchUserTab" data-tab="menu">
-        <text>🛍️ 商城</text>
+        <text>🧾 小菜单</text>
       </view>
       <view class="user-tab flex-center {{userTab === 'orders' ? 'active' : ''}}" bindtap="switchUserTab" data-tab="orders">
-        <text>📋 我的订单</text>
+        <text>📋 我的待办</text>
         <view class="tab-badge" wx:if="{{activeOrderCount > 0}}">{{activeOrderCount}}</view>
       </view>
     </view>
 
-    <!-- 商城视图 -->
+    <!-- 小菜单视图 -->
     <view wx:if="{{userTab === 'menu'}}">
       <!-- 一级分类 -->
       <view class="top-category-tabs flex-row">
@@ -72,24 +72,24 @@
             <view class="food-name">{{item.name}}</view>
             <view class="food-price"><text class="price-icon">💖</text>{{item.price || 5}} 币</view>
           </view>
-          <view class="food-order-btn flex-center" bindtap="orderFood" data-item="{{item}}">点餐</view>
+          <view class="food-order-btn flex-center" bindtap="orderFood" data-item="{{item}}">选定</view>
         </view>
         <view class="empty" wx:if="{{foodItems.length === 0}}">
           <text class="empty-emoji">🍽️</text>
-          <text class="empty-text">菜单还没上架哦～</text>
+          <text class="empty-text">菜单还没有内容哦～</text>
         </view>
       </scroll-view>
     </view>
 
-    <!-- 我的订单视图 -->
+    <!-- 我的待办视图 -->
     <view wx:if="{{userTab === 'orders'}}">
       <view class="empty" wx:if="{{userOrders.length === 0}}">
         <text class="empty-emoji">📋</text>
-        <text class="empty-text">还没有订单</text>
-        <text class="empty-sub">去菜单点餐吧～</text>
+        <text class="empty-text">还没有待办</text>
+        <text class="empty-sub">去小菜单选一个吧～</text>
       </view>
       <view class="clear-history" wx:if="{{userOrders.length > 0}}" bindtap="clearHistory">
-        <text>🗑️ 清除历史订单</text>
+        <text>🗑️ 清除历史待办</text>
       </view>
       <view class="order-item" wx:for="{{userOrders}}" wx:key="id">
         <view class="order-header flex-between">
@@ -97,7 +97,7 @@
             <text class="order-emoji">{{item.foodEmoji || '🍽️'}}</text>
             <view>
               <view class="order-food">{{item.foodName}}</view>
-              <view class="order-by">{{item.price < 0 ? '🎁 可获得 ' + (-item.price) + ' 币' : '💖 ' + (item.price || '待定价') + ' 币'}} · {{item.time}}</view>
+              <view class="order-by">{{item.price < 0 ? '🎁 可获得 ' + (-item.price) + ' 币' : '💖 ' + (item.price || '待填写') + ' 币'}} · {{item.time}}</view>
             </view>
           </view>
           <view class="order-status {{item.status}}">
@@ -111,21 +111,21 @@
       <view style="height: 120rpx;"></view>
     </view>
 
-    <!-- 点餐确认弹窗 -->
+    <!-- 选择确认弹窗 -->
     <view class="overlay" wx:if="{{orderItem}}" bindtap="closeOrder">
       <view class="overlay-card" catchtap="noop">
         <text class="order-emoji">{{orderItem.emoji}}</text>
-        <text class="order-question">确定要{{orderItem.price < 0 ? '兑换' : '点'}}这个吗？</text>
+        <text class="order-question">确定要{{orderItem.price < 0 ? '兑换' : '选'}}这个吗？</text>
         <text class="order-food-name">{{orderItem.name}}</text>
         <view wx:if="{{orderItem.price < 0}}">
           <view class="order-detail flex-row"><text>可获得：</text><text class="price-text" style="color:#4CAF50;">💖 {{-orderItem.price}} 币</text></view>
           <view class="order-after" style="color:#4CAF50;">提交后等待对方确认发放 💖</view>
         </view>
         <view wx:else>
-          <view class="order-detail flex-row"><text>价格：</text><text class="price-text">💖 {{orderItem.price || 5}} 币</text></view>
+          <view class="order-detail flex-row"><text>消耗：</text><text class="price-text">💖 {{orderItem.price || 5}} 币</text></view>
           <view class="order-detail flex-row"><text>余额：</text><text class="balance-text">💖 {{myCoins}} 币</text></view>
-          <view wx:if="{{myCoins >= (orderItem.price || 5)}}" class="order-after">下单后剩余 <text class="after-num">💖 {{myCoins - (orderItem.price || 5)}}</text> 币</view>
-          <view wx:else class="order-no-money">😢 爱心币不够了，快去充值吧～</view>
+          <view wx:if="{{myCoins >= (orderItem.price || 5)}}" class="order-after">确认后剩余 <text class="after-num">💖 {{myCoins - (orderItem.price || 5)}}</text> 币</view>
+          <view wx:else class="order-no-money">😢 爱心币不够了，先去补一点吧～</view>
         </view>
         <view class="rr-btns flex-row">
           <view class="rr-btn cancel" bindtap="closeOrder">取消</view>
@@ -148,10 +148,10 @@
       </view>
     </view>
 
-    <!-- 充值弹窗 -->
+    <!-- 补币弹窗 -->
     <view class="overlay" wx:if="{{showRechargeModal}}" bindtap="hideRecharge">
       <view class="overlay-card add-card" catchtap="noop">
-        <view class="add-title">💖 申请充值</view>
+        <view class="add-title">💖 申请补币</view>
         <view class="add-row flex-row">
           <text class="add-label">想要多少币</text>
           <input class="add-input short" type="number" placeholder="10" value="{{rechargeAmount}}" bindinput="onRechargeAmount" />
@@ -201,7 +201,7 @@
       </view>
     </view>
 
-    <!-- Tab 1: 商品管理 -->
+    <!-- Tab 1: 菜单整理 -->
     <view wx:if="{{devTab === 'menu'}}">
       <!-- 一级分类 -->
       <view class="top-category-tabs flex-row">
@@ -246,11 +246,11 @@
       </scroll-view>
 
       <view class="add-bar flex-center" bindtap="showAddFood">
-        <text>+ 添加商品并上架</text>
+        <text>+ 添加到菜单</text>
       </view>
     </view>
 
-    <!-- Tab 2: 订单队列 -->
+    <!-- Tab 2: 待办处理 -->
     <view wx:if="{{devTab === 'orders'}}">
       <view class="section-row flex-between">
         <view class="section-title">📋 待处理 ({{pendingOrders.length}})</view>
@@ -258,7 +258,7 @@
       </view>
       <view wx:if="{{pendingOrders.length === 0}}" class="empty">
         <text class="empty-emoji">🍳</text>
-        <text class="empty-text">还没有新订单</text>
+        <text class="empty-text">还没有新待办</text>
       </view>
       <view class="order-item" wx:for="{{pendingOrders}}" wx:key="id">
         <view class="order-header flex-between">
@@ -310,18 +310,18 @@
               <view class="req-by">{{item.requestedBy}} · {{item.time}}</view>
             </view>
           </view>
-          <view class="req-status" wx:if="{{item.status === 'pending'}}">待定价</view>
-          <view class="req-status done" wx:elif="{{item.status === 'priced'}}">已上架 💖{{item.price}}</view>
+          <view class="req-status" wx:if="{{item.status === 'pending'}}">待填写</view>
+          <view class="req-status done" wx:elif="{{item.status === 'priced'}}">已加入 💖{{item.price}}</view>
           <view class="req-status reject" wx:else>已拒绝</view>
         </view>
         <view class="req-actions flex-row" wx:if="{{item.status === 'pending'}}">
-          <input class="req-price-input" type="text" placeholder="定价（可负数）" value="{{item._price}}" data-id="{{item.id}}" bindinput="onReqPrice" />
-          <view class="oa-btn confirm" bindtap="approveFoodRequest" data-item="{{item}}">上架</view>
+          <input class="req-price-input" type="text" placeholder="消耗（可负数）" value="{{item._price}}" data-id="{{item.id}}" bindinput="onReqPrice" />
+          <view class="oa-btn confirm" bindtap="approveFoodRequest" data-item="{{item}}">加入菜单</view>
           <view class="oa-btn reject" bindtap="rejectFoodRequest" data-id="{{item.id}}">拒绝</view>
         </view>
       </view>
 
-      <view class="section-title" wx:if="{{coinRequests.length > 0}}">💖 充值请求</view>
+      <view class="section-title" wx:if="{{coinRequests.length > 0}}">💖 补币请求</view>
       <view class="request-item" wx:for="{{coinRequests}}" wx:key="id">
         <view class="req-header flex-between">
           <view>
@@ -341,10 +341,10 @@
       <view style="height: 100rpx;"></view>
     </view>
 
-    <!-- 拒绝订单原因弹窗 -->
+    <!-- 拒绝待办原因弹窗 -->
     <view class="overlay" wx:if="{{showRejectModal}}" bindtap="hideRejectModal">
       <view class="overlay-card add-card" catchtap="noop">
-        <view class="add-title">拒绝订单</view>
+        <view class="add-title">拒绝待办</view>
         <view class="form-row">
           <text class="form-label">原因</text>
           <input class="add-input" placeholder="告诉对方为什么拒绝…" value="{{rejectReason}}" bindinput="onRejectReason" maxlength="50" />
@@ -356,13 +356,13 @@
       </view>
     </view>
 
-    <!-- 添加/编辑商品弹窗 -->
+    <!-- 添加/编辑菜单项弹窗 -->
     <view class="overlay" wx:if="{{showFoodModal}}" bindtap="hideFoodModal">
       <view class="overlay-card add-card" catchtap="noop">
-        <view class="add-title">{{editingFood ? '编辑' : '添加'}}商品</view>
+        <view class="add-title">{{editingFood ? '编辑' : '添加'}}条目</view>
         <view class="add-row flex-row">
           <text class="add-label">名称</text>
-          <input class="add-input" placeholder="商品名称" value="{{foodForm.name}}" bindinput="onFoodFormName" maxlength="20" />
+          <input class="add-input" placeholder="名称" value="{{foodForm.name}}" bindinput="onFoodFormName" maxlength="20" />
         </view>
         <view class="add-row flex-row">
           <text class="add-label">Emoji</text>
@@ -381,12 +381,12 @@
           </picker>
         </view>
         <view class="add-row flex-row">
-          <text class="add-label">价格(币)</text>
+          <text class="add-label">消耗(币)</text>
           <input class="add-input short" type="text" placeholder="5（可输入负数）" value="{{foodForm.price}}" bindinput="onFoodFormPrice" />
         </view>
         <view class="rr-btns flex-row">
           <view class="rr-btn cancel" bindtap="hideFoodModal">取消</view>
-          <view class="rr-btn confirm" bindtap="saveFood">保存并上架</view>
+          <view class="rr-btn confirm" bindtap="saveFood">保存到菜单</view>
         </view>
       </view>
     </view>

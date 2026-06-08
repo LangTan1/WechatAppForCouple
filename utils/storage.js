@@ -5,6 +5,9 @@ let _coupleDocId = null;  // 当前设备绑定的情侣文档ID
 let _syncingFromCloud = false;  // 防止云端→本地→云端回环
 
 // 云同步字段映射：storage key → cloud field（名字字段单独处理）
+let _cloudSaveQueues = {};
+const CLOUD_PENDING_STORAGE_KEY = 'cloud_pending_updates';
+
 const CLOUD_FIELDS = {
   'together_date': 'togetherDate',
   'my_avatar': 'devAvatar',
@@ -259,6 +262,60 @@ function _getCanonicalCloudValue(storageKey, value) {
   return value;
 }
 
+function _enqueueSaveToCloud(storageKey, value) {
+  const previous = _cloudSaveQueues[storageKey] || Promise.resolve();
+  const next = previous.catch(function() {}).then(function() {
+    return saveToCloud(storageKey, value);
+  });
+  _cloudSaveQueues[storageKey] = next.catch(function() {});
+  return next;
+}
+
+function _getPendingCloudUpdates() {
+  try {
+    const pending = wx.getStorageSync(CLOUD_PENDING_STORAGE_KEY);
+    return pending && typeof pending === 'object' ? pending : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function _setPendingCloudUpdates(pending) {
+  try { wx.setStorageSync(CLOUD_PENDING_STORAGE_KEY, pending || {}); } catch (e) {}
+}
+
+function _markPendingCloudUpdate(storageKey, value) {
+  const pending = _getPendingCloudUpdates();
+  pending[storageKey] = {
+    value: _getCanonicalCloudValue(storageKey, value),
+    updatedAt: Date.now()
+  };
+  _setPendingCloudUpdates(pending);
+}
+
+function _clearPendingCloudUpdate(storageKey) {
+  const pending = _getPendingCloudUpdates();
+  if (!pending[storageKey]) return;
+  delete pending[storageKey];
+  _setPendingCloudUpdates(pending);
+}
+
+function _hasPendingCloudUpdate(storageKey) {
+  const pending = _getPendingCloudUpdates();
+  return !!pending[storageKey];
+}
+
+function _retryPendingCloudUpdates() {
+  const pending = _getPendingCloudUpdates();
+  Object.keys(pending).forEach(function(storageKey) {
+    const item = pending[storageKey];
+    if (!item) return;
+    _enqueueSaveToCloud(storageKey, item.value).then(function(success) {
+      if (success !== false) _clearPendingCloudUpdate(storageKey);
+    });
+  });
+}
+
 function get(key, defaultValue) {
   try {
     const val = wx.getStorageSync(key);
@@ -278,15 +335,24 @@ function set(key, value) {
         && key !== 'my_avatar' && key !== 'partner_avatar'
         && key !== 'my_gender' && key !== 'partner_gender' && cloudField) {
       console.log('[set] auto-sync triggered for key:', key, '→ cloud field:', cloudField);
-      saveToCloud(key, value).then(function() {
+      _markPendingCloudUpdate(key, value);
+      return _enqueueSaveToCloud(key, value).then(function(success) {
+        if (success === false) {
+          console.error('[set] sync FAIL for key:', key);
+          return true;
+        }
+        _clearPendingCloudUpdate(key);
         console.log('[set] sync OK for key:', key);
+        return true;
       }).catch(function(e) {
         console.error('[set] sync FAIL for key:', key, e);
+        return true;
       });
     }
   } catch (e) {
     console.error('Storage set error:', e);
   }
+  return Promise.resolve();
 }
 
 // ---- 角色管理 ----
@@ -372,13 +438,13 @@ function setPartnerGender(gender) {
 
 // 根据性别获取默认头像emoji
 function getMyWeatherProfile() { return get(STORAGE_KEYS.MY_WEATHER_PROFILE, null); }
-function setMyWeatherProfile(profile) { set(STORAGE_KEYS.MY_WEATHER_PROFILE, profile); }
+function setMyWeatherProfile(profile) { return set(STORAGE_KEYS.MY_WEATHER_PROFILE, profile); }
 function getPartnerWeatherProfile() { return get(STORAGE_KEYS.PARTNER_WEATHER_PROFILE, null); }
-function setPartnerWeatherProfile(profile) { set(STORAGE_KEYS.PARTNER_WEATHER_PROFILE, profile); }
+function setPartnerWeatherProfile(profile) { return set(STORAGE_KEYS.PARTNER_WEATHER_PROFILE, profile); }
 function getMyWeatherSnapshot() { return get(STORAGE_KEYS.MY_WEATHER_SNAPSHOT, null); }
-function setMyWeatherSnapshot(snapshot) { set(STORAGE_KEYS.MY_WEATHER_SNAPSHOT, snapshot); }
+function setMyWeatherSnapshot(snapshot) { return set(STORAGE_KEYS.MY_WEATHER_SNAPSHOT, snapshot); }
 function getPartnerWeatherSnapshot() { return get(STORAGE_KEYS.PARTNER_WEATHER_SNAPSHOT, null); }
-function setPartnerWeatherSnapshot(snapshot) { set(STORAGE_KEYS.PARTNER_WEATHER_SNAPSHOT, snapshot); }
+function setPartnerWeatherSnapshot(snapshot) { return set(STORAGE_KEYS.PARTNER_WEATHER_SNAPSHOT, snapshot); }
 function isWeatherSnapshotExpired(snapshot, ttl) {
   const effectiveTtl = typeof ttl === 'number' ? ttl : 60 * 60 * 1000;
   if (!snapshot || !snapshot.updatedAt) return true;
@@ -501,7 +567,7 @@ function getAlbums() {
   }
   return _buildDisplayAlbums(albums);
 }
-function setAlbums(list) { set(STORAGE_KEYS.ALBUM, _sanitizeAlbumsForStorage(list)); }
+function setAlbums(list) { return set(STORAGE_KEYS.ALBUM, _sanitizeAlbumsForStorage(list)); }
 function getAlbumPhotos() {
   const albums = getAlbums();
   const allPhotos = [];
@@ -845,6 +911,7 @@ async function loadFromCloud() {
     }
 
     await _syncCloudToLocal(data);
+    _retryPendingCloudUpdates();
     return true;
   } catch (e) {
     console.error('loadFromCloud error:', e);
@@ -935,7 +1002,9 @@ function _syncCloudToLocal(data) {
   if (data.whispers) set(STORAGE_KEYS.WHISPERS, data.whispers);
   if (data.wishes) set(STORAGE_KEYS.WISHES, data.wishes);
   if (data.anniversaries) set(STORAGE_KEYS.ANNIVERSARIES, data.anniversaries);
-  if (data.albums) set(STORAGE_KEYS.ALBUM, _sanitizeAlbumsForStorage(data.albums));
+  if (data.albums && !_hasPendingCloudUpdate(STORAGE_KEYS.ALBUM)) {
+    set(STORAGE_KEYS.ALBUM, _sanitizeAlbumsForStorage(data.albums));
+  }
   if (data.moods) set(STORAGE_KEYS.MOODS, data.moods);
   if (data.achievements) set(STORAGE_KEYS.ACHIEVEMENTS, data.achievements);
   if (data.orderQueue) set(STORAGE_KEYS.ORDER_QUEUE, data.orderQueue);
@@ -1073,13 +1142,13 @@ async function saveToCloud(storageKey, value) {
   const docId = getCoupleDocId();
   if (!docId) {
     console.warn('[saveToCloud] no docId, skipping. key:', storageKey);
-    return;
+    return true;
   }
 
   const cloudField = _getCloudFieldFor(storageKey);
   if (!cloudField) {
     console.warn('[saveToCloud] no cloudField for key:', storageKey);
-    return;
+    return true;
   }
 
   console.log('[saveToCloud] saving key:', storageKey, '→ field:', cloudField, 'docId:', docId);
@@ -1094,8 +1163,14 @@ async function saveToCloud(storageKey, value) {
       }
     });
     console.log('[saveToCloud] result:', JSON.stringify(res.result));
+    if (res.result && res.result.success === false) {
+      console.error('[saveToCloud] failed result:', res.result.error || res.result);
+      return false;
+    }
+    return true;
   } catch (e) {
     console.error('[saveToCloud] error:', e);
+    return false;
   }
 }
 

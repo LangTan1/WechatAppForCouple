@@ -1,4 +1,5 @@
 const storage = require('../../utils/storage');
+const contentSecurity = require('../../utils/content-security');
 
 Page({
   data: {
@@ -79,9 +80,10 @@ Page({
     this.setData({ inputText: e.detail.value });
   },
 
-  sendWhisper() {
+  async sendWhisper() {
     const text = this.data.inputText.trim();
     if (!text) return;
+    if (!(await contentSecurity.checkBeforePublish(text))) return;
 
     const now = new Date();
     const timeStr = `${now.getMonth() + 1}/${now.getDate()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;

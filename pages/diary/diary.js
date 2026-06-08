@@ -1,4 +1,5 @@
 const storage = require('../../utils/storage');
+const contentSecurity = require('../../utils/content-security');
 
 Page({
   data: {
@@ -35,12 +36,14 @@ Page({
   onTitleInput(e) { this.setData({ newTitle: e.detail.value }); },
   onContentInput(e) { this.setData({ newContent: e.detail.value }); },
 
-  addDiary() {
+  async addDiary() {
     const { newTitle, newContent } = this.data;
     if (!newTitle.trim() || !newContent.trim()) {
       wx.showToast({ title: '请填写完整哦～', icon: 'none' });
       return;
     }
+
+    if (!(await contentSecurity.checkBeforePublish([newTitle, newContent]))) return;
 
     const now = new Date();
     const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;

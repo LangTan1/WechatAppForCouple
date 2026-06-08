@@ -1,4 +1,5 @@
 const storage = require('../../utils/storage');
+const contentSecurity = require('../../utils/content-security');
 Page({
   data: {
     isDev: false,
@@ -181,9 +182,10 @@ Page({
     this.setData({ rechargeItem: e.detail.value });
   },
 
-  sendRecharge() {
+  async sendRecharge() {
     const amount = parseInt(this.data.rechargeAmount, 10) || 10;
     const exchangeItem = this.data.rechargeItem.trim() || '一个抱抱';
+    if (!(await contentSecurity.checkBeforePublish(exchangeItem))) return;
     storage.addCoinRequest(amount, exchangeItem, storage.getMyName());
     this.setData({ showRechargeModal: false });
     wx.showToast({ title: '请求已发送', icon: 'none' });
@@ -201,7 +203,7 @@ Page({
     this.setData({ coinMessage: e.detail.value });
   },
 
-  submitCoins() {
+  async submitCoins() {
     const amount = parseInt(this.data.coinAmount, 10);
     if (!amount || amount <= 0) {
       wx.showToast({ title: '请输入有效数量', icon: 'none' });
@@ -210,6 +212,7 @@ Page({
 
     const isAdd = this.data.coinMode === 'add';
     const message = this.data.coinMessage.trim();
+    if (!(await contentSecurity.checkBeforePublish(message))) return;
     const doChange = () => {
       const newBalance = isAdd
         ? this.data.coinBalance + amount
@@ -302,12 +305,13 @@ Page({
     this.setData({ editMyName: e.detail.value });
   },
 
-  saveMyName() {
+  async saveMyName() {
     const name = this.data.editMyName.trim();
     if (!name) {
       wx.showToast({ title: '名字不能为空', icon: 'none' });
       return;
     }
+    if (!(await contentSecurity.checkBeforePublish(name))) return;
     storage.setMyName(name);
     this.setData({ showNameModal: false });
     wx.showToast({ title: '昵称已更新', icon: 'none' });

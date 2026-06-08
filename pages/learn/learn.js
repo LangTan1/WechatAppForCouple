@@ -1,4 +1,5 @@
 const storage = require('../../utils/storage');
+const contentSecurity = require('../../utils/content-security');
 
 Page({
   data: {
@@ -34,12 +35,14 @@ Page({
     this.setData({ newContent: e.detail.value });
   },
 
-  addItem() {
+  async addItem() {
     const { newContent } = this.data;
     if (!newContent.trim()) {
       wx.showToast({ title: '写点什么吧～', icon: 'none' });
       return;
     }
+
+    if (!(await contentSecurity.checkBeforePublish(newContent))) return;
 
     const now = new Date();
     const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;

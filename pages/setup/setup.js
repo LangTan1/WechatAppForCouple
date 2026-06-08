@@ -1,4 +1,5 @@
 const storage = require('../../utils/storage');
+const contentSecurity = require('../../utils/content-security');
 const app = getApp();
 
 const DEFAULT_DEV_KEY = 'langdev520';
@@ -274,7 +275,7 @@ Page({
   onLockSwitch(e)   { this.setData({ lockEnabled: e.detail.value }); },
   onLockPin(e)      { this.setData({ lockPin: e.detail.value.replace(/\D/g, '') }); },
 
-  finishSetup() {
+  async finishSetup() {
     const { myName, myGender, togetherDate, lockEnabled, lockPin } = this.data;
     if (!myName.trim()) {
       wx.showToast({ title: '请填写你的名字～', icon: 'none' }); return;
@@ -288,6 +289,8 @@ Page({
     if (lockEnabled && lockPin.length !== 4) {
       wx.showToast({ title: '请设置4位数字密码', icon: 'none' }); return;
     }
+
+    if (!(await contentSecurity.checkBeforePublish(myName))) return;
 
     storage.setMyName(myName.trim());
     storage.setMyGender(myGender);
@@ -441,6 +444,10 @@ Page({
     this.setData({ bindLoading: true, bindError: '' });
 
     try {
+      if (!(await contentSecurity.checkBeforePublish(name))) {
+        this.setData({ bindLoading: false });
+        return;
+      }
       const result = await storage.bindCouple(code, name, gender);
       if (result.success) {
         storage.setSetupDone();
